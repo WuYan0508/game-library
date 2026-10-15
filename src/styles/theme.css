@@ -1,0 +1,118 @@
+/* 主题变量与全局基础样式。
+   深色为默认；浅色通过 `:root[data-theme="light"]` 覆盖（见设置页「软件外观」，
+   由 services/theme.ts 在启动时按用户偏好写入 data-theme）。 */
+
+:root {
+  /* 与主题无关的共享变量 */
+  --accent: #4c8dff;
+  --accent-hover: #6ea3ff;
+  --accent-soft: rgba(76, 141, 255, 0.14);
+  --accent-border: rgba(76, 141, 255, 0.4);
+  --danger: #f0554d;
+  --warning: #e0a33a;
+  --success: #4fb477;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --font-sans: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui,
+    -apple-system, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "Microsoft YaHei Mono", monospace;
+}
+
+/* 深色（默认） */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #14161b;
+  --bg-elevated: #1a1d24;
+  --surface: #1e222b;
+  --surface-hover: #252a35;
+
+  --border: #2b313d;
+  --border-strong: #3b4353;
+
+  --text: #e9ebf0;
+  --text-secondary: #a6aebd;
+  --text-faint: #737d8f;
+}
+
+/* 浅色 */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f4f5f7;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-hover: #eceef2;
+
+  --border: #d9dde5;
+  --border-strong: #c3c9d4;
+
+  --text: #1c2027;
+  --text-secondary: #4a5261;
+  --text-faint: #8a93a3;
+}
+
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* 滚动条完全隐藏：滚轮 / 触控板 / 键盘滚动不受影响，
+   只是不再显示视觉滚动条（用户偏好，2026-10-15）。 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* 卡片拖拽排序期间：禁止一切文字/图片选择 */
+body.dragging-cards,
+body.dragging-cards * {
+  user-select: none;
+}
+
+body.dragging-cards {
+  cursor: grabbing;
+}

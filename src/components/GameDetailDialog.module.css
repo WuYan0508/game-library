@@ -1,0 +1,199 @@
+/* 游戏详情弹窗：结构与 ScanDialog 一致（backdrop + dialog + footer）。 */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--surface);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close {
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+.close:hover {
+  color: var(--text);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.coverBox {
+  flex: none;
+  width: 96px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.summaryText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.gameName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.error {
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border: 1px solid rgba(240, 85, 77, 0.45);
+  border-radius: var(--radius-md);
+  background: rgba(240, 85, 77, 0.12);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.nameInput {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.nameInput:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
+.path {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  font-family: var(--font-mono, Consolas, monospace);
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.pathMuted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.pathActions {
+  display: flex;
+  gap: 8px;
+}
+
+.smallButton {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.smallButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.primary {
+  padding: 8px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.primary:hover:not(:disabled) {
+  background: rgba(76, 141, 255, 0.2);
+}
+
+.primary:disabled {
+  opacity: 0.55;
+}
+
+.ghost {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.ghost:hover {
+  background: var(--surface-hover);
+}

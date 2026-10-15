@@ -1,0 +1,15 @@
+/* 应用外壳：标题栏（fixed）+ 内容区。
+   内容区上留出标题栏的高度，页面自身的 height:100% 布局不受影响。 */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* 标题栏高度 */
+  padding-top: 34px;
+}

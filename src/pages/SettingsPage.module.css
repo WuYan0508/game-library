@@ -1,0 +1,233 @@
+/* 设置页：布局骨架沿用，正文改为「开机自启动 / 软件外观 / 注意事项」三个区块。 */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.backButton {
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.backButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.heading {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 20px 40px;
+  max-width: 860px;
+  width: 100%;
+}
+
+.section {
+  margin-bottom: 26px;
+}
+
+.sectionTitle {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.sectionBody {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* ---- 开机自启动：单行 + 开关 ---- */
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.settingText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settingLabel {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.settingDesc {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* 开关：轨道 + 圆形滑块 */
+.switch {
+  flex: none;
+  position: relative;
+  width: 42px;
+  height: 23px;
+  border: none;
+  border-radius: 12px;
+  background: var(--border-strong);
+  transition: background 0.15s ease;
+}
+
+.switch:disabled {
+  opacity: 0.5;
+}
+
+.switchOn {
+  background: var(--accent);
+}
+
+.knob {
+  position: absolute;
+  top: 2.5px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s ease;
+}
+
+.switchOn .knob {
+  left: 21px;
+}
+
+/* ---- 软件外观：三张可选卡片 ---- */
+
+.appearanceRow {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.appearanceOption {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  text-align: left;
+}
+
+.appearanceOption:hover {
+  background: var(--surface-hover);
+}
+
+.appearanceOption.selected {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+/* 预览色块：固定颜色，代表切换后的效果，不随当前主题变 */
+.appearancePreview {
+  width: 100%;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.appearancePreview[data-preview="dark"] {
+  background: linear-gradient(135deg, #14161b 55%, #4c8dff 140%);
+}
+
+.appearancePreview[data-preview="light"] {
+  background: linear-gradient(135deg, #f4f5f7 55%, #4c8dff 140%);
+}
+
+.appearancePreview[data-preview="system"] {
+  background: linear-gradient(90deg, #f4f5f7 50%, #14161b 50%);
+}
+
+.appearanceLabel {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.appearanceHint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* ---- 注意事项 ---- */
+
+.notesList {
+  margin: 0;
+  padding: 14px 16px 14px 34px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+}
+
+.versionLine {
+  margin: 26px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.actionButton {
+  flex: none;
+  padding: 7px 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-size: 13px;
+}
+
+.actionButton:hover:not(:disabled) {
+  background: rgba(76, 141, 255, 0.2);
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+}
+
+.maintenanceResult {
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  word-break: break-all;
+}

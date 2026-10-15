@@ -1,0 +1,197 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.brandMark {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.brandName {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.search {
+  flex: 1 1 auto;
+  min-width: 140px;
+  max-width: 420px;
+  margin-right: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.search::placeholder {
+  color: var(--text-faint);
+}
+
+.search:focus {
+  border-color: var(--accent-border);
+  outline: none;
+}
+
+.primaryButton {
+  flex: none;
+  padding: 8px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-weight: 500;
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-faint);
+}
+
+.ghostButton {
+  flex: none;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.ghostButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.sortLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.select {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.orderButton {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.orderButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.count {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.errorBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(240, 85, 77, 0.1);
+}
+
+.errorText {
+  flex: 1 1 auto;
+  font-size: 12.5px;
+  color: var(--danger);
+}
+
+.retryButton {
+  flex: none;
+  padding: 4px 12px;
+  border: 1px solid rgba(240, 85, 77, 0.4);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* 恢复提示：信息性，用强调色而不是危险色 */
+.recoveredBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+}
+
+.recoveredBar .errorText {
+  font-size: 13px;
+  color: var(--text-secondary);
+}

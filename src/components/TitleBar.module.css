@@ -1,0 +1,135 @@
+/* 自定义标题栏与缩放热区。
+   注意：标题栏/热区都是 fixed 定位，z-index 要压过页面与弹窗背景，
+   让弹窗打开时窗口仍可拖动/缩放（原生应用的行为）。 */
+
+.bar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 0 0 12px;
+  /* 与页面内容区顶栏同色（--bg-elevated），视觉上连成一片 */
+  background: var(--bg-elevated);
+  user-select: none;
+}
+
+.title {
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+
+.controls {
+  display: flex;
+  height: 100%;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.control svg {
+  width: 10px;
+  height: 10px;
+  stroke: currentColor;
+  stroke-width: 1;
+  fill: none;
+}
+
+.control:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.closeControl:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+/* ---- 缩放热区：贴着窗口八条边，厚度 5px ---- */
+
+.handleN,
+.handleS,
+.handleE,
+.handleW,
+.handleNE,
+.handleNW,
+.handleSE,
+.handleSW {
+  position: fixed;
+  z-index: 70;
+}
+
+.handleN {
+  top: 0;
+  left: 6px;
+  right: 6px;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.handleS {
+  bottom: 0;
+  left: 6px;
+  right: 6px;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.handleE {
+  top: 6px;
+  bottom: 6px;
+  right: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.handleW {
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.handleNE {
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nesw-resize;
+}
+
+.handleNW {
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nwse-resize;
+}
+
+.handleSE {
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nwse-resize;
+}
+
+.handleSW {
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nesw-resize;
+}

@@ -1,0 +1,53 @@
+[package]
+name = "game-library"
+version = "1.0.2"
+description = "Windows 个人游戏库（手动导入版）"
+authors = ["wuayn"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "game_library_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+# 手动测试开关：会话生命周期测试目前在本机环境下无法加载，
+# 默认不参与 `cargo test`；需要时用 --features manual-tests 显式运行。
+manual-tests = []
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# `protocol-asset` 为 asset protocol 所需：tauri.conf.json 中启用了
+# `app.security.assetProtocol` 来放行应用数据目录下的封面与图标，二者必须同时存在。
+tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-log = "2"
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+thiserror = "2"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+rusqlite_migration = "2.6.0"
+uuid = { version = "1.28.0", features = ["v4"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Shell", "Win32_System_Environment", "Win32_System_Ole", "Win32_System_Threading", "Win32_Graphics_Imaging", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_System_Diagnostics_ToolHelp", "Win32_System_ProcessStatus", "Win32_Security", "Win32_System_WindowsProgramming", "Win32_System_Registry"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
+tokio = { version = "1.53.3", features = ["time"] }
+tauri-plugin-autostart = "2.7.0"
+tauri-plugin-single-instance = "2.5.4"
+
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
