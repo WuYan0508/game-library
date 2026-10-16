@@ -577,3 +577,69 @@ src/
 | `once_cell` | 全局静态 |
 
 **Node（`package.json`）**：`@tauri-apps/api`、`@tauri-apps/cli`、`@tauri-apps/plugin-dialog`、`react`、`react-dom`、`typescript`、`vite`、`@vitejs/plugin-react`。
+
+---
+
+## 14. P8 后增量演进记录（2026-10-15，v1.0.0 → v1.0.2）
+
+P8 验收后应用进入持续迭代，以下决策按时间序补充，均已实现并测试通过。
+
+### ADR-13 无边框窗口与自定义标题栏
+
+- `decorations: false`，自绘标题栏（`data-tauri-drag-region`）+ 四边缩放热区（`start_resize_dragging`）。
+- **坑**：`core:window:default` 在 Tauri 2.12 里只含只读权限 —— 变更类窗口操作
+  （`start-dragging` / `start-resize-dragging` / `minimize` / `close` / `toggle-maximize`）
+  必须显式声明，且被 ACL 拒绝时是**静默失败**。
+
+### ADR-14 系统托盘 + 关闭行为可配置 + 单实例
+
+- `tauri` 启用 `tray-icon` 特性；托盘左键单击 = 显示主窗口，右键菜单「打开游戏库 / 退出」。
+- 关闭按钮行为持久化于 `settings.json`（`commands/tray_settings.rs`）：默认「最小化到托盘」
+  （`CloseRequested` 拦截 + `prevent_close` + `hide`），可改为直接退出。
+- **单实例**：`tauri-plugin-single-instance`（必须第一个注册），重复启动唤醒已有窗口。
+- 已知限制：托盘化期间关机/注销会被拦截，系统可能提示「阻止关机」。
+
+### ADR-15 开机自启动
+
+- `tauri-plugin-autostart`（capabilities 加 `autostart:default`）；UI 开关乐观更新、失败回滚。
+
+### ADR-16 自定义排序
+
+- 迁移 **0002**：games 加 `sort_order INTEGER NOT NULL DEFAULT 0`，存量按 rowid 回填。
+- 新游戏 insert 时 `sort_order = MAX+1`；拖拽提交走 `reorder_games` 命令
+  （事务：全表置 -1 → 按给定顺序落位 → 未列出的按 rowid 接尾）。
+- `GameSort::Custom` 白名单值 `custom` → `ORDER BY sort_order`。
+
+### ADR-17 图标内容归一化
+
+- 提取链路新增 `normalize_visible_content`：按可见 alpha 求包围盒，裁剪后 Lanczos 等比放大铺满画布
+  （可见占比 ≥ 92% 的不动）；主路径产出可见占比 < 35% 时改用 SHGetFileInfoW 回退路径并择优。
+- 背景：`GetImage` 对缺大尺寸资源的 exe 会返回「小 logo 居中在带框画布」的合成图。
+
+### ADR-18 启动工作目录规则
+
+- 启动时工作目录**一律取 exe 所在目录**（`effective_working_directory`），与资源管理器双击一致；
+  库内存的 `working_directory` 仅作展示。实测巫师 3 以游戏根目录为 cwd 会静默退出（退出码 0），
+  且该问题跨机器复现 —— 统一在启动器层面生效，存量记录无需迁移。
+- 自动发现（Steam）产出的候选同样以 exe 父目录为 working_directory。
+
+### ADR-19 产品名与分发
+
+- `productName` / `mainBinaryName` = 「游戏库」；**MSI（WiX 3）对非 ASCII 产品名不兼容**，
+  `bundle.targets` 收敛为 `["nsis"]`。
+- 分发：安装包通过 GitHub Release 附件提供（`release/` 目录式分发已弃用）。
+
+### 设置页改版（ADR-15/14/16 的 UI 载体）
+
+- 区块：开机自启动 / 关闭按钮行为 / 软件外观（深色、白色；偏好存 localStorage）/ 注意事项 / 维护（重新提取缺失图标）/ 版本号。
+- 主题：`:root[data-theme]` 双变量集；渲染前 `initTheme()` 防闪屏。
+
+### 依赖清单增补
+
+| 项 | 用途 |
+|---|---|
+| `tauri` features += `tray-icon` | 系统托盘 |
+| `tauri-plugin-autostart` | 开机自启动 |
+| `tauri-plugin-single-instance` | 单实例 |
+| `tauri-plugin-opener`（JS + Rust） | 打开所在位置 |
+| `@tauri-apps/plugin-autostart`（JS） | 自启动 API |
