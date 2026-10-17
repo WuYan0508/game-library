@@ -9,8 +9,15 @@ interface ChangelogEntry {
 /** 每个版本只记录「新增的功能」，修改与修复不在此列出。 */
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.2",
+    version: "1.21",
     current: true,
+    items: [
+      "「检查更新」按钮移至行右侧",
+      "版本号旁新增 GitHub 仓库链接",
+    ],
+  },
+  {
+    version: "1.2",
     items: [
       "全新白色手柄应用图标",
       "设置内新增「更新日志」",
