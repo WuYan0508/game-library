@@ -1,6 +1,6 @@
 [package]
 name = "game-library"
-version = "1.22.0"
+version = "1.23.0"
 description = "Windows 个人游戏库（手动导入版）"
 authors = ["wuayn"]
 edition = "2024"
@@ -38,7 +38,7 @@ rusqlite_migration = "2.6.0"
 uuid = { version = "1.28.0", features = ["v4"] }
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Shell", "Win32_System_Environment", "Win32_System_Ole", "Win32_System_Threading", "Win32_Graphics_Imaging", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_System_Diagnostics_ToolHelp", "Win32_System_ProcessStatus", "Win32_Security", "Win32_System_WindowsProgramming", "Win32_System_Registry"] }
-image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "ico"] }
 tokio = { version = "1.53.3", features = ["time"] }
 tauri-plugin-autostart = "2.7.0"
 tauri-plugin-updater = "2"

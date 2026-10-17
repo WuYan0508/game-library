@@ -99,11 +99,6 @@ export default function GameGrid({
     if (!dragEnabled || dragIdRef.current !== null) {
       return;
     }
-    // 按在按钮上（启动/移除/封面按钮）不进入拖拽，避免抢按钮的点击
-    if ((event.target as HTMLElement).closest("button")) {
-      return;
-    }
-
     const startX = event.clientX;
     const startY = event.clientY;
     pressStartRef.current = { x: startX, y: startY };
@@ -117,6 +112,14 @@ export default function GameGrid({
       // 禁止文字/图片被拖拽选择，并清掉按下前已存在的选区
       document.body.classList.add("dragging-cards");
       window.getSelection()?.removeAllRanges();
+
+      // 拖拽达成后压制随后的 click：长按在「启动 / 移除」等按钮上松手，
+      // 不能误触发按钮（快速点击 < 350ms 不会走到这里，按钮点击不受影响）
+      const suppressClick = (clickEvent: MouseEvent) => {
+        clickEvent.stopPropagation();
+        clickEvent.preventDefault();
+      };
+      document.addEventListener("click", suppressClick, true);
 
       // 记录拖拽前全部卡片的视口位置（FLIP 动画的 First；丢失则动画不会播放）
       const firstRects = new Map<string, DOMRect>();
@@ -240,6 +243,7 @@ export default function GameGrid({
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointermove", onCancelMove);
         document.body.classList.remove("dragging-cards");
+        document.removeEventListener("click", suppressClick, true);
         stopAutoScroll();
         onContainerScrollRef.current?.();
         scrollContainerRef.current = null;
@@ -262,10 +266,14 @@ export default function GameGrid({
     function cancelPress() {
       window.clearTimeout(timer);
       window.removeEventListener("pointermove", onCancelMove);
+      window.removeEventListener("pointerup", onEarlyUp);
       cleanupRef.current = null;
     }
+    // 提前松手（未满长按时长）必须取消计时器 —— 否则单点后卡片会在松手后进入拖拽状态
+    const onEarlyUp = () => cancelPress();
     cleanupRef.current = cancelPress;
     window.addEventListener("pointermove", onCancelMove);
+    window.addEventListener("pointerup", onEarlyUp);
   }
 
   // FLIP：交换提交后的首次 games 更新，让所有位移过的卡片（含被拖卡）平滑滑入新位

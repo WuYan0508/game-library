@@ -10,7 +10,7 @@ pub const ICONS_DIR: &str = "icons";
 
 /// 图标 PNG 的体积上限。正常情况下 256px 图标只有几十 KB，
 /// 超过说明来路可疑（或编码链路出了问题），不落盘。
-const MAX_ICON_BYTES: usize = 2 * 1024 * 1024;
+pub(crate) const MAX_ICON_BYTES: usize = 2 * 1024 * 1024;
 
 /// 提取图标并写入 `<data_dir>/icons/<game_id>.png`。
 ///

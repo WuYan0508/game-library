@@ -6,12 +6,18 @@
 
 import { useEffect, useState } from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { open } from "@tauri-apps/plugin-dialog";
 import { describeError, gameApi } from "../services/gameApi";
 import { toUserMessage } from "../services/errorMessages";
 import { pushToast } from "../services/toastStore";
 import { formatPlayTime } from "../utils/format";
 import Cover from "./Cover";
 import type { Game } from "../types/game";
+const EXE_FILTERS = [{ name: "可执行文件", extensions: ["exe"] }];
+const ICON_SOURCE_FILTERS = [
+  { name: "图标来源（EXE / 图片）", extensions: ["exe", "ico", "png", "jpg", "jpeg", "webp"] },
+];
+
 import styles from "./GameDetailDialog.module.css";
 
 interface GameDetailDialogProps {
@@ -37,6 +43,8 @@ export default function GameDetailDialog({
 }: GameDetailDialogProps) {
   const [name, setName] = useState(game.name);
   const [saving, setSaving] = useState(false);
+  const [retargeting, setRetargeting] = useState(false);
+  const [iconBusy, setIconBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 换了游戏（或外部刷新）时重置输入与错误态
@@ -76,6 +84,58 @@ export default function GameDetailDialog({
       await revealItemInDir(game.launchPath);
     } catch (err) {
       pushToast(toUserMessage(err));
+    }
+  }
+
+  /** 更改启动目标：选择新的 EXE，探测后更新启动路径与工作目录（名称与参数保持不变）。 */
+  async function chooseTarget() {
+    setError(null);
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        filters: EXE_FILTERS,
+      });
+      if (typeof selected !== "string") {
+        return;
+      }
+      setRetargeting(true);
+      const probe = await gameApi.probeExe(selected);
+      const updated = await gameApi.updateGame({
+        id: game.id,
+        launchPath: probe.launchPath,
+        workingDirectory: probe.workingDirectory,
+      });
+      onUpdated(updated);
+      pushToast("启动目标已更新", "info");
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setRetargeting(false);
+    }
+  }
+
+  /** 更改图标：EXE 提取其图标，图片转码存入应用数据目录。 */
+  async function chooseIcon() {
+    setError(null);
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        filters: ICON_SOURCE_FILTERS,
+      });
+      if (typeof selected !== "string") {
+        return;
+      }
+      setIconBusy(true);
+      await gameApi.importGameIcon(game.id, selected);
+      const updated = await gameApi.getGame(game.id);
+      onUpdated(updated);
+      pushToast("图标已更新", "info");
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setIconBusy(false);
     }
   }
 
@@ -155,6 +215,32 @@ export default function GameDetailDialog({
               >
                 复制路径
               </button>
+              <button
+                className={styles.smallButton}
+                type="button"
+                disabled={retargeting}
+                title="选择新的 EXE，启动参数保持不变"
+                onClick={() => void chooseTarget()}
+              >
+                {retargeting ? "更改中…" : "更改目标"}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>图标</span>
+            <div className={styles.pathActions}>
+              <button
+                className={styles.smallButton}
+                type="button"
+                disabled={iconBusy}
+                onClick={() => void chooseIcon()}
+              >
+                {iconBusy ? "导入中…" : "更改图标"}
+              </button>
+              <span className={styles.muted}>
+                支持 EXE（提取其图标）与 ICO / PNG / JPG / WebP 图片
+              </span>
             </div>
           </div>
 

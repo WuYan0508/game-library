@@ -169,6 +169,7 @@ pub fn run() {
             commands::import::add_game_from_shortcut,
             commands::covers::import_cover,
             commands::covers::extract_game_icon,
+            commands::covers::import_game_icon,
             commands::games::reorder_games,
             commands::maintenance::reextract_missing_icons,
             commands::tray_settings::get_close_to_tray,

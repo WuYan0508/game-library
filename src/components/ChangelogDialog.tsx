@@ -9,8 +9,15 @@ interface ChangelogEntry {
 /** 每个版本只记录「新增的功能」，修改与修复不在此列出。 */
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.22",
+    version: "1.23",
     current: true,
+    items: [
+      "游戏详情新增「更改图标」：选择 EXE 提取其图标，或使用 ICO / PNG / JPG / WebP 图片",
+      "游戏详情新增「更改启动目标」：游戏搬家后无需删掉重加，直接更新启动位置",
+    ],
+  },
+  {
+    version: "1.22",
     items: [
       "启动时检测到新版本改为弹窗提示，可在弹窗内直接下载安装并重启",
     ],

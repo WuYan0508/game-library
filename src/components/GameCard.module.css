@@ -1,5 +1,6 @@
 .card {
   position: relative;
+  position: relative;
   /* 卡片是操作单元，文字不需要被选择 —— 常驻禁选，
      从根上杜绝长按/拖拽时的文字与图片选中问题 */
   user-select: none;
@@ -201,11 +202,6 @@
   padding: 0;
   border: none;
   background: none;
-  cursor: pointer;
-}
-
-.coverButton:hover {
-  outline: 1px solid var(--accent-border);
 }
 
 /* 长按拖拽状态 */
@@ -244,4 +240,32 @@
   .dragged {
     transition: none;
   }
+}
+
+/* 卡面右上角的详情入口（悬停浮现） */
+.moreButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+
+.card:hover .moreButton,
+.moreButton:focus-visible {
+  opacity: 1;
+}
+
+.moreButton:hover {
+  background: rgba(0, 0, 0, 0.72);
 }

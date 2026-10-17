@@ -98,13 +98,18 @@ export default function GameCard({
       }
     >
       <button
-        className={styles.coverButton}
+        className={styles.moreButton}
         type="button"
-        title="查看详情"
+        title="游戏详情"
+        aria-label={`打开 ${game.name} 的详情`}
         onClick={() => onOpen(game)}
       >
-        <Cover game={game} />
+        ···
       </button>
+
+      <div className={styles.coverButton}>
+        <Cover game={game} />
+      </div>
 
       <div className={styles.body}>
         <h3 className={styles.name} title={game.name}>

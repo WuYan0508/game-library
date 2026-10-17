@@ -147,6 +147,11 @@ export const gameApi = {
     return invoke<{ iconPath: string | null }>("extract_game_icon", { gameId });
   },
 
+  /** 从选择的文件导入自定义图标（EXE 提取 / 图片转码）。 */
+  importGameIcon(gameId: string, sourcePath: string): Promise<{ iconPath: string | null }> {
+    return invoke<{ iconPath: string | null }>("import_game_icon", { gameId, sourcePath });
+  },
+
   /** 自定义排序：按完整 id 顺序持久化。 */
   reorderGames(orderedIds: string[]): Promise<void> {
     return invoke<void>("reorder_games", { orderedIds });
