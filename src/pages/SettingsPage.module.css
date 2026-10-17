@@ -256,3 +256,15 @@
   font-size: 13px;
   color: var(--danger);
 }
+
+/* 版本号旁的仓库链接 */
+.repoLink {
+  margin-left: 8px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.repoLink:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}

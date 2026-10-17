@@ -6,6 +6,7 @@ import {
   setAppearance,
   type Appearance,
 } from "../services/theme";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { gameApi } from "../services/gameApi";
 import { toUserMessage } from "../services/errorMessages";
 import { pushToast } from "../services/toastStore";
@@ -297,8 +298,8 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                   需要联网访问 GitHub Releases；仅在你点击时联网，不做后台自动检查
                 </span>
               </div>
+              <UpdateChecker />
             </div>
-            <UpdateChecker />
           </div>
         </section>
 
@@ -325,6 +326,16 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
           {version
             ? `游戏库 · 版本 ${version.replace(/\.0$/, "")}`
             : "游戏库"}
+          <a
+            className={styles.repoLink}
+            href="https://github.com/WuYan0508/game-library"
+            onClick={(event) => {
+              event.preventDefault();
+              void openUrl("https://github.com/WuYan0508/game-library");
+            }}
+          >
+            GitHub 仓库
+          </a>
         </p>
 
         {changelogOpen && (
