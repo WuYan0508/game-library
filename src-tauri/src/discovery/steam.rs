@@ -550,9 +550,7 @@ mod unicode_path_tests {
         std::fs::create_dir_all(&game_dir).expect("建目录");
         std::fs::write(game_dir.join("DarkSoulsRemastered.exe"), b"mz").expect("写 exe");
 
-        let text = format!(
-            "\"AppState\"\n{{\n\t\"appid\"\t\t\"570940\"\n\t\"name\"\t\t\"DARK SOULS: REMASTERED\"\n\t\"installdir\"\t\t\"黑暗之魂 REMASTERED\"\n\t\"StateFlags\"\t\t\"4\"\n}}\n"
-        );
+        let text = "\"AppState\"\n{\n\t\"appid\"\t\t\"570940\"\n\t\"name\"\t\t\"DARK SOULS: REMASTERED\"\n\t\"installdir\"\t\t\"黑暗之魂 REMASTERED\"\n\t\"StateFlags\"\t\t\"4\"\n}\n";
         std::fs::write(root.join("steamapps").join("appmanifest_570940.acf"), text)
             .expect("写清单");
 

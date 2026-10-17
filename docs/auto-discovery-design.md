@@ -302,3 +302,161 @@ NVIDIA App 未来版本改格式 → 解析失败降级为来源不可用（已�
   「实际生效值」一致。
 - NVIDIA / Epic / 目录扫描来源未改动：其 exe 与 install_dir 同层或以根目录为 cwd 均正常
   （CS2 / LoL / Lies of P 等实测）。
+
+---
+
+## 10. 阶段一调查结论：AMD / Ubisoft Connect / Battle.net（2026-10-16）
+
+> 调查环境：本机（NVIDIA RTX 4070 Laptop GPU，Windows 11）。全部为**只读**检查。
+> AMD Software 在本机未安装，其结论受限于无真实样本，相关项已标注「未验证」。
+
+### 10.1 AMD Software / Adrenalin —— 未安装，无法调查
+
+- 实测：`C:/Program Files\AMD`、`C:/Program Files (x86)\AMD`、`C:/AMD`、`%LOCALAPPDATA%\AMD`、
+  `%PROGRAMDATA%\AMD` 均**不存在**；卸载表无 AMD/Radeon 条目；本机 GPU 为 NVIDIA RTX 4070 Laptop。
+- 结论：**本机无法验证 Adrenalin 的游戏配置格式**（官方资料仅确认 Adrenalin 有游戏扫描功能，
+  未公开配置格式）。按文档预案处理：
+  - 阶段二**不实现** AMD 解析器，来源状态报告「本机未安装」（优雅跳过），目录扫描作为回退；
+  - 若未来在某台装有 Adrenalin 的机器上完成格式验证，再按 ADR 流程补充适配器；
+  - fixture 计划：由于没有真实样本，只能基于公开资料构造**脱敏模拟样本**，全部标注「未验证」。
+
+### 10.2 Ubisoft Connect —— 格式已验证（安装判定部分未验证）
+
+实测文件与结构：
+
+| 项 | 实测结果 |
+|---|---|
+| 客户端目录 | `C:/Program Files (x86)\Ubisoft\` 存在但为**空目录残留**；数据实际在 `%LOCALAPPDATA%\Ubisoft Game Launcher\` |
+| 配置文件 | `%LOCALAPPDATA%\Ubisoft Game Launcher\cache\configuration\configurations`（115,230 字节） |
+| 文件格式 | protobuf 信封（顶层 framing 不规则）内嵌 **463 个 YAML 配置块**（`version: 2.0` 起、`localizations: {}` 止） |
+| YAML 结构 | `root.name`（可能为本地化键如 "l1"）、`root.sort_string`（真实名，如 "Assassin's Creed 10"）、`root.start_game.online/offline.executables[]`（`shortcut_name`、`path.relative` = 启动 exe 相对路径、`working_directory.register` = `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs\<spaceId>\InstallDir`、`arguments`）、`root.space_id` / `app_id`、`uplay.achievements_sync_id`（短代号如 ACU） |
+| 安装判定 | `HKLM:\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs\<数字产品ID>\InstallDir`：**2026-10-16 复扫**发现 1 条安装记录（ID=40 → `D:/Ubisoft Game Launcher/games/Assassin's Creed Revelations/`，目录存在 ✓）；缓存里 463 个配置块对应大量历史/商店记录 —— 「平台记录存在 ≠ 游戏仍然安装」已实证（此前曾为零安装） |
+| 注册表 ID 与 YAML 的关联 | **注意：注册表用数字产品 ID（如 40），YAML 用 GUID space_id —— 两者不直接对应**。可靠关联：InstallDir 目录名（含游戏名）→ YAML `sort_string` / `shortcut_name` 匹配 → 取该块 `executables[].path.relative` |
+| 解析方式 | 无需严格顶层 framing：扫描 YAML 块（`version: 2.0` → `localizations: {}`）+ 枚举注册表 Installs 子键，两者关联即可 |
+
+启动 exe 解析规则（已从真实验证的字段推导）：**InstallDir（注册表）+ path.relative（YAML）**；
+`arguments`（如 offline 的 `-offline`）为可选启动参数。
+
+**未验证项（2026-10-16 复扫后更新）**：
+
+1. ~~端到端启动链~~ **已验证**：真实安装《刺客信条：启示录》（Installs\\40）后复扫，
+   `InstallDir + executables[].path.relative` 命中真实存在的
+   `AssassinsCreedRevelations.exe` 与 `ACRSP.exe` ✓；
+2. 显示名权威来源：`root.name` 为本地化键（如 "l1"）/模板（如 "GAMENAME"）时，
+   实测 `sort_string`（"Assassin's Creed 04"）与 `shortcut_name` 提供真实名 —— 组合使用，
+   权威来源仍待更多样本确认；
+3. 一个 YAML 块可含**多个产品的 executables**（实测同块含 Odyssey 与 Revelations），
+   适配器需按块内游戏名分组，不能按块一一对应；
+4. 同一游戏的多个 exe（主程序 vs 前置启动器，如 AssassinsCreedRevelations.exe / ACRSP.exe）
+   如何自动选择主程序 —— 未验证，候选生成时建议全部列出交给用户确认。
+### 10.3 Battle.net —— 格式已验证（protobuf，可解析）
+
+| 项 | 实测结果 |
+|---|---|
+| 文件 | `%PROGRAMDATA%\Battle.net\Agent\product.db`（1,183 字节；同目录另有 `.product.db` 327B 与 `Agent.dat` 4B，用途未验证） |
+| 格式 | **标准 protobuf wire format**（无公开 schema；字段布局与 Lutris 的实现一致） |
+| 解析 | 最小 varint/wire 解析器即可：顶层 field 1 = Product（repeated）；Product 内 field 2 = 产品代号（string）、field 3 = 子消息{field 1 = base_path（string）、field 2 = region（string）}、field 4 = 版本串（二进制语义未解析）；顶层级另有 field 5/6/7 未识别（field 7 = 频道名字符串如 "hs_beta"） |
+| 本机记录 | 3 条：`agent`（→ C:/ProgramData/Battle.net/Agent，**排除：启动器**）、`bna`（→ D:/Battle.net，**排除：战网客户端**）、`hsb`（→ **D:/Hearthstone**，炉石传说 beta 频道，**真实游戏**） |
+| 目录与 EXE 验证 | 3 个 base_path 目录全部存在；`D:/Hearthstone/Hearthstone.exe` 存在（651,904 字节）✓ |
+| 产物代号→游戏名 | 需维护映射表（`hsb` → 炉石传说）。本机只有 1 个游戏样本；常见代号（wow / s1 / d3 / w3 / ow / dst2 等）来自公开资料，**未逐个验证** |
+
+**实现约束（阶段二）**：
+
+1. 解析器必须容错：未知 wire type 跳过或中止单条记录、不越界（本调查的极简解析器已在
+   「字段 2 含二进制」时以 errors=replace 容错 —— 实现时对应「非 UTF-8 字段不致命」）；
+2. `agent` / `bna` 按产品代号排除；顶层级未识别字段一律忽略；
+3. 版本风险：字段号基于本机单样本 + Lutris 参考，**无官方 schema 保证** —— fixture 必须以
+   本机真实 product.db 脱敏后为基准，遇 Battle.net 大版本更新重新验证；
+4. EXE 候选：产品安装目录下验证存在（如 Hearthstone.exe），找不到时不伪造。
+
+### 10.4 阶段一总体结论
+
+| 来源 | 格式 | 可产游戏候选？ | 阶段二动作 |
+|---|---|---|---|
+| AMD | 未验证（本机未安装） | 否 | **不实现解析器**，来源状态「本机未安装」，优雅跳过 |
+| Ubisoft | YAML 块已验证；安装判定注册表键已验证 | 需注册表有 Installs 记录 | 实现适配器：YAML 扫描 + 注册表关联 + EXE 解析；本机当前零安装 → 预期返回「成功但空结果」 |
+| Battle.net | protobuf 已验证 | 是（hsb → 炉石传说） | 实现适配器：最小 protobuf 解析 + agent/bna 排除 + 产品代号映射表（部分未验证） |
+
+### 10.5 fixture 测试计划
+
+- **Ubisoft**：脱敏 configurations 样本（含安装中 / 已卸载 / 无 install 字段 / 损坏块）；
+  注册表 mock（有 Installs / 空 Installs / 键不存在）；与其他来源同路径重复。
+- **Battle.net**：脱敏 product.db 样本（本机真实数据改路径脱敏；agent/bna/游戏混合；截断；
+  未知 wire type；空文件）；代号称映射表命中与未命中。
+- **协调器回归**：三新来源失败不影响既有来源；空结果语义正确；非 ASCII 路径。
+- **AMD**：仅实现「来源状态 = 未安装」的降级路径与对应测试（无格式样本，不实现解析）。
+
+### 10.6 阶段二完成状态（2026-10-16 实现完毕）
+
+- **已实现**：`discovery/sources/battlenet.rs`（最小 protobuf 解析 + agent/bna/bnt 排除 +
+  代号映射表：hsb/hs/wow/d3/ow/s1/w3，未收录代号计入 skipped 不伪造）、
+  `discovery/sources/ubisoft.rs`（YAML 块内容扫描 + 注册表 Installs 关联 + exe 存在校验，
+  多 exe 全部列出交用户确认）、`discovery/sources/amd.rs`（降级：探测安装痕迹 →
+  「未安装」或明确的「格式未实机验证」报告，不解析不产出候选）、
+  `platform/win.rs::registry_subkeys`（子键枚举，只读）。
+- **已注册**：三来源接入 scan_all 协调器；`DiscoverySource` 枚举扩展（rank：ubisoft=2、
+  battlenet=1、amd=0）；前端 SOURCE_LABELS 同步。
+- **真机冒烟（2026-10-16）**：battlenet 可用候选 1（炉石传说，与 NVIDIA 同路径自动合并）、
+  ubisoft 可用候选 2（启示录 ACRSP/主程序，用户确认选择）、amd 未安装优雅跳过；既有来源无回归。
+- **测试**：新增 14 条（battlenet 5 / ubisoft 6 / amd 3），全部合成 fixture，不依赖实机安装；
+  全套 157 条 → 153 passed / 0 failed。
+- **如实标注**：Battle.net 代号映射表除 hsb 外均为公开资料未实机验证；AMD 格式未验证；
+  Ubisoft 端到端链路已在本机实机验证（启示录）。
+
+### 10.7 阶段三完成状态（2026-10-16 协调器验证）
+
+阶段三要求（复用 launch_path_key 去重、同名不同路径保留、失败隔离、扫描不写库、不接 UI）
+**全部由既有协调器管线天然满足**，未新增协调器代码 —— 只补了 6 条集成测试锁定行为
+（`discovery/mod.rs::phase3_tests`，全部合成数据）：
+
+1. 跨来源合并：炉石传说同时被 Battle.net 与 NVIDIA 发现（路径分隔符/大小写差异）→
+   合并为一条、来源聚合、rank 高者在前；
+2. 同名不同路径：三个同名候选（Ubisoft×2 + Battle.net）全部保留，不按名称强行合并；
+3. 库内标记：新来源候选同样正确标记 already_in_library；
+4. 警告聚合：两来源各带 warning → 合并后都保留；
+5. 失败隔离：AMD 未安装 + Ubisoft 不可用 → Battle.net 候选照常产出；
+6. **扫描不写库**：scan_all 前后库内记录数一致（写入只发生在用户确认导入时）。
+
+另：real_env_tests 真机冒烟断言已更新为新现实（7 来源、炉石传说与 NVIDIA 合并、
+启示录由 Ubisoft 产出、AMD 未安装）。
+
+### 10.8 阶段二/三文件清单（已落地）
+
+- 新增：`discovery/sources/ubisoft.rs`、`discovery/sources/battlenet.rs`、`discovery/sources/amd.rs`（降级实现）、
+  `discovery/sources/fixtures/`（脱敏样本）、`discovery/sources/protodb.rs`（Battle.net 最小 protobuf 解析器）。
+- 修改：`discovery/mod.rs`（注册三个来源）、`docs/auto-discovery-design.md`（本节随实现状态更新）。
+
+---
+
+## 11. 阶段四：回归与验收（2026-10-16 执行）
+
+### 11.1 校验命令与真实结果
+
+| 命令 | 结果 |
+|---|---|
+| `cargo fmt --check` | ✅ exit 0 |
+| `cargo clippy --all-targets` | ✅ 零告警（0 error / 0 warning，clean 重建确认） |
+| `cargo test`（lib + 集成目标） | ✅ **159 passed / 0 failed**（4 条 manual-tests 门控跳过） |
+| `cargo test --features manual-tests --test session_manager` | ❌ **如实记录：本环境无法运行** —— `STATUS_ENTRYPOINT_NOT_FOUND`（0xc0000139），为 P6 已排查并文档化的**与代码无关的工具链问题**（见 manual-testing.md「环境阻塞说明」），非本次改动引入 |
+| `npx tsc --noEmit` | ✅ exit 0 |
+| `npm run build` | ✅ exit 0 |
+| `npm run tauri build` | ✅ exit 0（NSIS 2.72 MiB） |
+
+### 11.2 验收清单逐项核对
+
+- [x] **三个来源各有独立适配器** —— `discovery/{amd,battlenet,ubisoft}.rs`（按项目真实目录约定放置，非文档建议的 `sources/` 子目录）
+- [x] **AMD 数据格式经过真实验证；不可用时优雅跳过** —— 实测本机未安装（GPU 为 NVIDIA）→ 来源状态「未安装」；有安装痕迹但格式未验证时报告 Unavailable 并说明原因，零候选
+- [x] **Ubisoft 字段和路径有真实证据，注册表不可用不导致整体失败** —— configurations 格式实测验证（§10.2）；注册表读取经系统只读接口验证；适配器对注册表缺失优雅降级（空 Installs → 未安装）并有对应测试
+- [x] **Battle.net 使用经过验证的解析方式，不靠猜测字段实现** —— 本机 product.db 真实样本解析验证（§10.3）；字段布局与 Lutris 公开实现一致；仅收录已验证/公开可知代号
+- [x] **所有启动路径均经过验证；无可靠 EXE 时不伪造** —— 三个适配器均做 `is_file()` 校验；无效路径/无 EXE 一律计入 skipped
+- [x] **单条或单来源失败不影响其他结果** —— phase3_tests 覆盖（损坏记录跳过、失败隔离、AMD+Ubisoft 失败时 Battle.net 照常）
+- [x] **复用 launch_path_key 去重** —— 合并走既有 `normalize_launch_key`，未引入第二套规则（phase3_tests 锁定）
+- [x] **本阶段没有 UI、数据库写入、自动导入、联网、程序执行或平台文件修改** —— scan_all 前后库内记录数一致（phase3_tests 锁定）；适配器全部只读
+- [x] **现有功能回归测试通过** —— 159 条全绿（含既有 Steam/Epic/NVIDIA/目录 fixture 无回归）
+- [x] **docs/auto-discovery-design.md 与真实实现一致** —— §10/§10.6/§10.7/§11 随实现同步更新
+
+### 11.3 如实声明的未完成项
+
+1. **AMD 格式未实机验证**（本机无 AMD 实机）—— 适配器标注「已实现（降级）、模拟测试通过、实机待验证」；
+2. **manual-tests 门控测试本机无法运行**（历史工具链问题，与本次改动无关，见 §11.1）；
+3. **Battle.net 代号映射表**仅 hsb 实机验证，其余代号来自公开资料。

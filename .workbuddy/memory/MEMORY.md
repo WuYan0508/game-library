@@ -89,7 +89,37 @@ Windows 桌面个人游戏库，只做**手动导入**：导入 `.exe` / `.lnk`�
 - Tauri 侧：`tauri.conf.json` 启用 `app.security.assetProtocol` 时，`Cargo.toml` 的 `tauri` 依赖**必须**加 `features = ["protocol-asset"]`，否则 build script 直接报错。
 - 注意：工程路径含中文，若构建异常优先怀疑路径问题，可改 ASCII 路径。
 
-## 版本号规则（用户 2026-10-15 指定）
+## 版本号规则（用户 2026-10-15 指定，2026-10-16 更新为两位式）
 
 - **每次对软件做出修改后，必须先询问用户是否修改版本号**，得到确认后才改版本。
 - 当前版本：**1.0.0**（tauri.conf.json 与 src-tauri/Cargo.toml 两处同步改；设置页底部会显示版本号，读取自 Tauri 的 getVersion()）。
+
+## GitHub 仓库（2026-10-15 建立）
+
+- 仓库：`WuYan0508/game-library`（https://github.com/WuYan0508/game-library），SSH 推送。
+- **网络要点**：本机直连 `github.com` 不稳定（主站 000、OAuth Bad Gateway），但
+  `api.github.com` 直连可用；**推送走 SSH 备用通道** `ssh.github.com:443`
+  （~/.ssh/config 已配 Host github.com → ssh.github.com:443，密钥 `~/.ssh/github_gamelibrary`）。
+  推送偶发超时，**重试一两次即成功** —— 遇到推送失败先重试，别查代码。
+- git 身份（仓库级）：wuayn / wuayn@users.noreply.github.com；分支 main。
+- gh CLI 已装（C:/Program Files/GitHub CLI/gh.exe），未登录（OAuth 被网络挡）。
+- .gitignore 已排除 src-tauri/target、node_modules、dist。
+
+## 自动发现扩展需求（2026-10-16，AMD / Ubisoft / Battle.net）
+
+- 需求文档：`C://Users//wuayn//Downloads//game_library_amd_ubisoft_battlenet_implementation_steps.md`。
+- 核心：三阶段推进（**阶段一调查与验证，不改代码** → 阶段二独立适配器 → 阶段三协调器去重），
+  fixture 测试脱敏、不依赖本机必须装平台；**本次只做发现适配器与测试，UI/导入集成留后续**。
+- 铁性约束：不伪造 launch_path；不把二进制当 JSON；reg.exe 曾被安全策略阻止（不得绕过）；
+  排除 agent/bna 等启动器记录；复用 launch_path_key 去重；不重写现有来源。
+- 阶段一交付 = 更新 docs/auto-discovery-design.md 逐项记录真实检查结论。
+
+### 版本号两位式方案（用户 2026-10-16 指定）
+
+- 版本号按 **主.次** 两位递增：1.1 → 1.2 → 1.3，**不含补丁位**。
+- Tauri 强制三段 semver（"1.1" 会被拒），因此：**存储用三段**（tauri.conf.json / Cargo.toml
+  写 1.1.0、1.2.0），**展示用两位**（SettingsPage 对 getVersion() 结果做
+  `replace(/\.0$/, "")`，显示「版本 1.1」「版本 1.2」）。
+- 安装包文件名由 Tauri 生成带三段（游戏库_1.2.0_x64-setup.exe）；GitHub Release
+  附件上传时可重命名为两位式（如 游戏库_1.2-setup.exe）。
+- 下一次版本递增 = **1.2**。

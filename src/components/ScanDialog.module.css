@@ -5,7 +5,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(64px);
+  -webkit-backdrop-filter: blur(64px);
 }
 
 .dialog {
@@ -15,7 +17,7 @@
   height: min(680px, calc(100vh - 64px));
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg, 12px);
-  background: var(--surface);
+  background: var(--surface-solid);
 }
 
 .header {

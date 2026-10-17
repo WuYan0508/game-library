@@ -10,6 +10,8 @@ import { gameApi } from "../services/gameApi";
 import { toUserMessage } from "../services/errorMessages";
 import { pushToast } from "../services/toastStore";
 import styles from "./SettingsPage.module.css";
+import ChangelogDialog from "../components/ChangelogDialog";
+import UpdateChecker from "../components/UpdateChecker";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -33,6 +35,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   // null = 还在读取当前状态
   const [closeToTray, setCloseToTray] = useState<boolean | null>(null);
   const [version, setVersion] = useState<string | null>(null);
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const [reextracting, setReextracting] = useState(false);
   const [reextractResult, setReextractResult] = useState<string | null>(null);
 
@@ -284,9 +287,49 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
           </div>
         </section>
 
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>检查更新</h2>
+          <div className={styles.sectionBody}>
+            <div className={styles.settingRow}>
+              <div className={styles.settingText}>
+                <span className={styles.settingLabel}>检查并安装更新</span>
+                <span className={styles.settingDesc}>
+                  需要联网访问 GitHub Releases；仅在你点击时联网，不做后台自动检查
+                </span>
+              </div>
+            </div>
+            <UpdateChecker />
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>更新日志</h2>
+          <div className={styles.sectionBody}>
+            <div className={styles.settingRow}>
+              <div className={styles.settingText}>
+                <span className={styles.settingLabel}>查看各版本新增内容</span>
+                <span className={styles.settingDesc}>只记录新增的功能，当前版本 1.2</span>
+              </div>
+              <button
+                className={styles.actionButton}
+                type="button"
+                onClick={() => setChangelogOpen(true)}
+              >
+                查看
+              </button>
+            </div>
+          </div>
+        </section>
+
         <p className={styles.versionLine}>
-          {version ? `游戏库 · 版本 ${version}` : "游戏库"}
+          {version
+            ? `游戏库 · 版本 ${version.replace(/\.0$/, "")}`
+            : "游戏库"}
         </p>
+
+        {changelogOpen && (
+          <ChangelogDialog onClose={() => setChangelogOpen(false)} />
+        )}
       </main>
     </div>
   );

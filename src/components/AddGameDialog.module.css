@@ -1,11 +1,13 @@
 .overlay {
   position: fixed;
   inset: 0;
+  backdrop-filter: blur(64px);
+  -webkit-backdrop-filter: blur(64px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.72);
   z-index: 100;
 }
 
@@ -17,7 +19,7 @@
   max-height: 100%;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
+  background: var(--surface-solid);
   overflow: hidden;
 }
 
@@ -97,7 +99,7 @@
 
 .entry {
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--surface-solid);
   color: var(--text-secondary);
 }
 
@@ -151,7 +153,7 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: var(--surface-solid);
 }
 
 .detailLabel {
@@ -208,7 +210,7 @@
 
 .primaryButton:disabled {
   opacity: 0.5;
-  background: var(--surface);
+  background: var(--surface-solid);
   border-color: var(--border);
   color: var(--text-faint);
 }
@@ -218,7 +220,7 @@
   padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: var(--surface-solid);
   color: var(--text-secondary);
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { Game } from "../types/game";
 import GameCard from "./GameCard";
 import styles from "./GameGrid.module.css";
@@ -60,6 +60,40 @@ export default function GameGrid({
   const overIdRef = useRef<string | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const pressStartRef = useRef<{ x: number; y: number } | null>(null);
+  // FLIP 动画：长按达成时记录全部卡片的「旧位置」，落位后据此做平滑过渡
+  const flipRef = useRef<Map<string, DOMRect> | null>(null);
+  // 拖拽时的边缘自动滚动
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const autoScrollRafRef = useRef<number | null>(null);
+  const lastPointerRef = useRef({ x: 0, y: 0 });
+  // 拖拽开始至今的滚动差值：被拖卡片的跟随偏移必须把它算进去，
+  // 否则自动滚动时卡片会跟着内容走而不是跟着鼠标走
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const scrollDeltaRef = useRef(0);
+  const scrollAtDragStartRef = useRef(0);
+  const onContainerScrollRef = useRef<(() => void) | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  function findScrollable(element: HTMLElement | null): HTMLElement | null {
+    let node = element?.parentElement ?? null;
+    while (node) {
+      const overflowY = window.getComputedStyle(node).overflowY;
+      if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function stopAutoScroll() {
+    if (autoScrollRafRef.current !== null) {
+      cancelAnimationFrame(autoScrollRafRef.current);
+      autoScrollRafRef.current = null;
+    }
+  }
+  // 提交后置 true；games 更新（或超时兜底）时消费并释放拖拽视觉
+  const pendingSettleRef = useRef(false);
 
   function onCardPointerDown(game: Game, event: React.PointerEvent) {
     if (!dragEnabled || dragIdRef.current !== null) {
@@ -84,34 +118,121 @@ export default function GameGrid({
       document.body.classList.add("dragging-cards");
       window.getSelection()?.removeAllRanges();
 
-      const onMove = (moveEvent: PointerEvent) => {
-        setPointer({ x: moveEvent.clientX, y: moveEvent.clientY });
-        const next = hitTestCard(moveEvent.clientX, moveEvent.clientY, game.id);
+      // 记录拖拽前全部卡片的视口位置（FLIP 动画的 First；丢失则动画不会播放）
+      const firstRects = new Map<string, DOMRect>();
+      document.querySelectorAll<HTMLElement>("[data-card-id]").forEach((el) => {
+        const id = el.dataset.cardId;
+        if (id) {
+          firstRects.set(id, el.getBoundingClientRect());
+        }
+      });
+      flipRef.current = firstRects;
+
+      // 边缘自动滚动：拖到列表上/下边缘时自动滚动，越靠边越快
+      const cardEl = document.querySelector<HTMLElement>(`[data-card-id="${game.id}"]`);
+      scrollContainerRef.current = findScrollable(cardEl);
+      scrollAtDragStartRef.current = scrollContainerRef.current?.scrollTop ?? 0;
+      scrollDeltaRef.current = 0;
+      setScrollOffset(0);
+      const containerForListen = scrollContainerRef.current;
+      if (containerForListen) {
+        const onContainerScroll = () => {
+          const offset = containerForListen.scrollTop - scrollAtDragStartRef.current;
+          scrollDeltaRef.current = offset;
+          setScrollOffset(offset);
+        };
+        containerForListen.addEventListener("scroll", onContainerScroll);
+        onContainerScrollRef.current = () => {
+          containerForListen.removeEventListener("scroll", onContainerScroll);
+          onContainerScrollRef.current = null;
+        };
+      }
+      lastPointerRef.current = { x: startX, y: startY };
+
+      const updateHover = () => {
+        const next = hitTestCard(game.id);
         if (next !== overIdRef.current) {
           overIdRef.current = next;
           setOverId(next);
         }
       };
 
-      const onUp = (upEvent: PointerEvent) => {
+      const onMove = (moveEvent: PointerEvent) => {
+        lastPointerRef.current = { x: moveEvent.clientX, y: moveEvent.clientY };
+        setPointer({ x: moveEvent.clientX, y: moveEvent.clientY });
+        updateHover();
+        // 直接写 transform：绕过 React 渲染排队，鼠标再快也零延迟跟随
+        // （滚动差值用 ref 取实时值；React 渲染写入的是同一值，不会打架）
+        const press = pressStartRef.current;
+        const draggedEl = document.querySelector<HTMLElement>(`[data-card-id="${game.id}"]`);
+        if (press && draggedEl) {
+          const dx = moveEvent.clientX - press.x;
+          const dy = moveEvent.clientY - press.y + scrollDeltaRef.current;
+          draggedEl.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
+        }
+      };
+
+      const autoScrollStep = () => {
+        const container = scrollContainerRef.current;
+        const { y } = lastPointerRef.current;
+        if (!container) {
+          autoScrollRafRef.current = null;
+          return;
+        }
+        const rect = container.getBoundingClientRect();
+        const edge = 72; // 距上/下边缘 72px 内触发
+        let delta = 0;
+        // 以卡面网格自身的边界为滚动上限：网格底已进入视口就不再下滚，顶同理
+        // （否则滚动容器的多余空间会把所有卡片滚出视野）
+        const gridRect = gridRef.current?.getBoundingClientRect();
+        if (y < rect.top + edge) {
+          if (!gridRect || gridRect.top < rect.top - 1) {
+            delta = -Math.ceil((1 - (y - rect.top) / edge) * 16); // 最快 16px/帧
+          }
+        } else if (y > rect.bottom - edge) {
+          if (!gridRect || gridRect.bottom > rect.bottom + 1) {
+            delta = Math.ceil((1 - (rect.bottom - y) / edge) * 16);
+          }
+        }
+        if (delta !== 0) {
+          container.scrollTop += delta;
+          updateHover(); // 滚动后重新判定悬停目标
+        }
+        autoScrollRafRef.current = requestAnimationFrame(autoScrollStep);
+      };
+
+      autoScrollRafRef.current = requestAnimationFrame(autoScrollStep);
+
+      const onUp = () => {
         cleanup();
-        setPointer(null);
         const dragged = dragIdRef.current;
         const targetId = overIdRef.current;
         dragIdRef.current = null;
         overIdRef.current = null;
-        setDragId(null);
         setOverId(null);
         if (!dragged || !targetId) {
+          // 未成交换：卡片滑回原位
+          setDragId(null);
+          setPointer(null);
           return;
         }
-        const targetEl = document.querySelector(`[data-card-id="${targetId}"]`);
-        const before = targetEl
-          ? upEvent.clientX <
-            targetEl.getBoundingClientRect().left +
-              targetEl.getBoundingClientRect().width / 2
-          : true;
-        commitReorder(dragged, targetId, before);
+        // 插入方向跟随拖拽方向（按交换前的原始顺序判断）：
+        // 从左往右拖 → 放到目标之后；从右往左 → 放到目标之前。
+        // 与重叠高亮配套：边缘刚接触松手，两卡即真正的位置互换。
+        const fromIdx = games.findIndex((g) => g.id === dragged);
+        const toIdx = games.findIndex((g) => g.id === targetId);
+        const insertAfter = fromIdx < toIdx;
+        // 提交后保持拖拽视觉（卡片停在指针处），等新顺序渲染后由 FLIP 接管滑入新位
+        pendingSettleRef.current = true;
+        // 兜底：1 秒内 games 未更新（IPC 异常）也强制释放，卡片绝不悬停
+        window.setTimeout(() => {
+          if (pendingSettleRef.current) {
+            pendingSettleRef.current = false;
+            setDragId(null);
+            setPointer(null);
+          }
+        }, 1000);
+        commitReorder(dragged, targetId, insertAfter);
       };
 
       function cleanup() {
@@ -119,6 +240,9 @@ export default function GameGrid({
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointermove", onCancelMove);
         document.body.classList.remove("dragging-cards");
+        stopAutoScroll();
+        onContainerScrollRef.current?.();
+        scrollContainerRef.current = null;
         cleanupRef.current = null;
       }
       cleanupRef.current = cleanup;
@@ -144,12 +268,54 @@ export default function GameGrid({
     window.addEventListener("pointermove", onCancelMove);
   }
 
+  // FLIP：交换提交后的首次 games 更新，让所有位移过的卡片（含被拖卡）平滑滑入新位
+  useLayoutEffect(() => {
+    if (!pendingSettleRef.current) {
+      // 与交换无关的 games 更新（搜索 / 会话计时等）不触发动画、不消费记录
+      return;
+    }
+    pendingSettleRef.current = false;
+    const first = flipRef.current;
+    flipRef.current = null;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (first && !reduceMotion) {
+      document.querySelectorAll<HTMLElement>("[data-card-id]").forEach((el) => {
+        const id = el.dataset.cardId;
+        const firstRect = id ? first.get(id) : undefined;
+        if (!id || !firstRect) {
+          return;
+        }
+        const newRect = el.getBoundingClientRect();
+        const dragged = el.style.transform !== "";
+        // First 位置按拖拽期间的滚动量校正（两者坐标系才一致）
+        const firstTop = firstRect.top - scrollDeltaRef.current;
+        const start = dragged
+          ? el.style.transform // 被拖卡：从当前指针位置出发
+          : `translate(${firstRect.left - newRect.left}px, ${firstTop - newRect.top}px)`;
+        const moved = dragged || firstRect.left !== newRect.left || firstTop !== newRect.top;
+        if (!moved) {
+          return;
+        }
+        el.animate(
+          [{ transform: start }, { transform: "none" }],
+          { duration: 500, easing: "cubic-bezier(0.45, 0.05, 0.55, 0.95)" }
+        );
+      });
+    }
+
+    // 无条件释放拖拽视觉状态：flipRef 缺失（被中途更新消费）时也要落位，绝不悬停
+    setDragId(null);
+    setPointer(null);
+  }, [games]);
+
   // 被拖卡片相对按下位置的偏移（驱动跟随动画）
   const dragOffset =
     dragId !== null && pointer !== null && pressStartRef.current !== null
       ? {
           x: pointer.x - pressStartRef.current.x,
-          y: pointer.y - pressStartRef.current.y,
+          // + 滚动差值：自动滚动时卡片跟随鼠标而非跟随内容
+          y: pointer.y - pressStartRef.current.y + scrollOffset,
         }
       : null;
 
@@ -158,39 +324,54 @@ export default function GameGrid({
    * 用「指针到卡片矩形的距离」而非 elementFromPoint —— 被拖卡片（置顶跟随指针）
    * 会挡住下方的目标卡，且卡片间有空隙，几何最近距离的判定范围最大。
    */
-  function hitTestCard(x: number, y: number, draggedId: string): string | null {
+  function hitTestCard(draggedId: string): string | null {
+    // 交换判定：被拖卡片与目标卡「出现重叠部分」即可交换，取重叠面积最大者
+    const draggedEl = document.querySelector<HTMLElement>(
+      `[data-card-id="${draggedId}"]`,
+    );
+    if (!draggedEl) {
+      return null;
+    }
+    const draggedRect = draggedEl.getBoundingClientRect();
     const cards = document.querySelectorAll<HTMLElement>("[data-card-id]");
     let best: string | null = null;
-    let bestDist = Number.POSITIVE_INFINITY;
+    let bestArea = 0;
     cards.forEach((el) => {
       const id = el.dataset.cardId;
       if (!id || id === draggedId) {
         return;
       }
       const rect = el.getBoundingClientRect();
-      const dx = Math.max(rect.left - x, 0, x - rect.right);
-      const dy = Math.max(rect.top - y, 0, y - rect.bottom);
-      const dist = dx * dx + dy * dy;
-      if (dist < bestDist) {
-        bestDist = dist;
+      const overlapX =
+        Math.min(draggedRect.right, rect.right) -
+        Math.max(draggedRect.left, rect.left);
+      const overlapY =
+        Math.min(draggedRect.bottom, rect.bottom) -
+        Math.max(draggedRect.top, rect.top);
+      if (overlapX <= 0 || overlapY <= 0) {
+        return;
+      }
+      const area = overlapX * overlapY;
+      if (area > bestArea) {
+        bestArea = area;
         best = id;
       }
     });
     return best;
   }
 
-  function commitReorder(draggedId: string, targetId: string, before: boolean) {
+  function commitReorder(draggedId: string, targetId: string, insertAfter: boolean) {
     const ids = games.map((game) => game.id);
     const from = ids.indexOf(draggedId);
-    if (from < 0) {
+    const target = ids.indexOf(targetId);
+    if (from < 0 || target < 0) {
       return;
     }
+    // 插入方向跟随拖拽方向：从左往右拖 → 放到目标之后；从右往左 → 放到目标之前。
+    // 与「边缘接触即高亮」的重叠判定配套：刚碰到邻卡松手，就是真正的位置互换。
     ids.splice(from, 1);
-    const to = ids.indexOf(targetId);
-    if (to < 0) {
-      return;
-    }
-    ids.splice(before ? to : to + 1, 0, draggedId);
+    const insertAt = insertAfter ? ids.indexOf(targetId) + 1 : ids.indexOf(targetId);
+    ids.splice(insertAt, 0, draggedId);
     onReorder(ids);
   }
 
@@ -211,7 +392,7 @@ export default function GameGrid({
   }
 
   return (
-    <div className={styles.grid}>
+    <div ref={gridRef} className={styles.grid}>
       {games.map((game) => (
         <GameCard
           key={game.id}

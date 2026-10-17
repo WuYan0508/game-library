@@ -7,7 +7,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.72);
+  /* 遮罩磨砂：模糊其后的主界面内容 */
+  backdrop-filter: blur(64px);
+  -webkit-backdrop-filter: blur(64px);
 }
 
 .dialog {
@@ -17,7 +20,9 @@
   max-height: calc(100vh - 64px);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg, 12px);
-  background: var(--surface);
+  /* 二级界面：实色底 */
+  background: var(--surface-solid);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
 }
 
 .header {

@@ -3,7 +3,8 @@
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 use windows::Win32::System::Registry::{
-    HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, REG_SZ, RegOpenKeyExW, RegQueryValueExW,
+    HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, REG_SZ, RegEnumKeyExW, RegOpenKeyExW,
+    RegQueryValueExW,
 };
 use windows::Win32::System::WindowsProgramming::QueryUnbiasedInterruptTime;
 
@@ -316,6 +317,66 @@ pub fn registry_string(root: RegRoot, subkey: &str, value_name: &str) -> Option<
         .take_while(|c| *c != 0)
         .collect();
     Some(String::from_utf16_lossy(&wide))
+}
+
+/// 枚举注册表某个键下的全部子键名（只读，一层）。
+///
+/// 用于发现类适配器遍历安装记录（如 Ubisoft 的
+/// `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs\<id>`）。键不存在返回空列表。
+pub fn registry_subkeys(root: RegRoot, subkey: &str) -> Vec<String> {
+    let predefined: HKEY = match root {
+        RegRoot::CurrentUser => HKEY_CURRENT_USER,
+        RegRoot::LocalMachine => HKEY_LOCAL_MACHINE,
+    };
+
+    let mut subkey_wide: Vec<u16> = subkey.encode_utf16().collect();
+    subkey_wide.push(0);
+
+    // SAFETY: subkey 以 NUL 结尾；成功后句柄由 OwnedHandle 接管并在函数尾关闭。
+    let mut handle = HKEY::default();
+    let opened = unsafe {
+        RegOpenKeyExW(
+            predefined,
+            windows::core::PCWSTR(subkey_wide.as_ptr()),
+            None,
+            KEY_READ,
+            &mut handle,
+        )
+    };
+    if opened.is_err() {
+        return Vec::new();
+    }
+    let guard = unsafe { OwnedHandle::new(HANDLE(handle.0)) };
+
+    let mut names = Vec::new();
+    let mut index = 0u32;
+    loop {
+        let mut buffer = [0u16; 256];
+        let mut size = buffer.len() as u32;
+        // SAFETY: buffer/size 成对传入；枚举到末尾（ERROR_NO_MORE_ITEMS）即停止。
+        let result = unsafe {
+            RegEnumKeyExW(
+                HKEY(guard.raw().0),
+                index,
+                Some(windows::core::PWSTR(buffer.as_mut_ptr())),
+                &mut size,
+                None,
+                None,
+                None,
+                None,
+            )
+        };
+        if result.is_err() {
+            break;
+        }
+        let wide = &buffer[..size as usize];
+        names.push(String::from_utf16_lossy(wide));
+        index += 1;
+        if index > 4096 {
+            break; // 防御：异常注册表不至于死循环
+        }
+    }
+    names
 }
 
 /// 注册表根键（避免把 windows 的 HKEY 类型暴露给业务层）。

@@ -1,6 +1,13 @@
 /** 与 Rust 侧 `discovery` 模块的 DTO 一一对应。 */
 
-export type DiscoverySource = "nvidia" | "steam" | "epic" | "directory";
+export type DiscoverySource =
+  | "nvidia"
+  | "steam"
+  | "epic"
+  | "ubisoft"
+  | "battlenet"
+  | "amd"
+  | "directory";
 
 export type DiscoveryConfidence = "high" | "medium" | "low";
 
@@ -59,6 +66,9 @@ export const SOURCE_LABELS: Record<DiscoverySource, string> = {
   nvidia: "NVIDIA App",
   steam: "Steam",
   epic: "Epic",
+  ubisoft: "Ubisoft Connect",
+  battlenet: "Battle.net",
+  amd: "AMD Software",
   directory: "指定目录",
 };
 

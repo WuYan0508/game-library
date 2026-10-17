@@ -1,6 +1,6 @@
 [package]
 name = "game-library"
-version = "1.0.2"
+version = "1.2.0"
 description = "Windows 个人游戏库（手动导入版）"
 authors = ["wuayn"]
 edition = "2024"
@@ -41,6 +41,8 @@ windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_System_Co
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
 tokio = { version = "1.53.3", features = ["time"] }
 tauri-plugin-autostart = "2.7.0"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2.5.4"
 
 

@@ -223,7 +223,9 @@ fn visible_pixel_ratio(image: &RgbaImage) -> f32 {
     }
     let visible = image
         .pixels
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .filter(|pixel| pixel[3] > VISIBLE_ALPHA_THRESHOLD)
         .count();
     visible as f32 / total as f32
@@ -697,7 +699,7 @@ mod normalize_tests {
             height: 256,
             pixels: vec![0; 256 * 256 * 4],
         };
-        for pixel in image.pixels.chunks_exact_mut(4) {
+        for pixel in image.pixels.as_chunks_mut::<4>().0 {
             pixel.copy_from_slice(&[120, 120, 200, 255]);
         }
         let before = image.pixels.clone();
@@ -727,10 +729,10 @@ mod normalize_tests {
             pixels: vec![0; 8 * 8 * 4],
         };
         // (1,1) 放一个 alpha=16 的像素（不算可见）
-        image.pixels[(1 * 8 + 1) * 4 + 3] = 16;
+        image.pixels[9 * 4 + 3] = 16;
         // (5,5) 放一个 alpha=17 的像素（可见）
-        image.pixels[(5 * 8 + 5) * 4 + 3] = 17;
-        image.pixels[(5 * 8 + 5) * 4] = 200;
+        image.pixels[45 * 4 + 3] = 17;
+        image.pixels[45 * 4] = 200;
 
         let (min_x, min_y, max_x, max_y) = visible_bbox(&image).expect("应有可见内容");
         assert_eq!((min_x, min_y, max_x, max_y), (5, 5, 6, 6));

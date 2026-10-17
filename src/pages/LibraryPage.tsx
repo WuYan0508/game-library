@@ -96,9 +96,11 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
           setSort("custom");
           setOrder("asc");
         }
-        await reload();
       } catch (err) {
         pushToast(toUserMessage(err));
+      } finally {
+        // 无论成败都刷新：FLIP 动画依赖新顺序渲染触发（失败时恢复 DB 现状）
+        await reload();
       }
     },
     [sort, reload],

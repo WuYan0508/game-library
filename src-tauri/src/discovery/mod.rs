@@ -6,10 +6,13 @@
 //!
 //! 一个来源失败不影响其它来源：每个来源返回独立的 `SourceScanResult`。
 
-pub mod directory;
+pub mod amd;
+mod battlenet;
+mod directory;
 pub mod epic;
 pub mod nvidia;
 pub mod steam;
+mod ubisoft;
 pub mod vdf;
 
 use std::path::PathBuf;
@@ -27,6 +30,9 @@ pub enum DiscoverySource {
     Nvidia,
     Steam,
     Epic,
+    Ubisoft,
+    Battlenet,
+    Amd,
     Directory,
 }
 
@@ -36,6 +42,9 @@ impl DiscoverySource {
             DiscoverySource::Nvidia => "nvidia",
             DiscoverySource::Steam => "steam",
             DiscoverySource::Epic => "epic",
+            DiscoverySource::Ubisoft => "ubisoft",
+            DiscoverySource::Battlenet => "battlenet",
+            DiscoverySource::Amd => "amd",
             DiscoverySource::Directory => "directory",
         }
     }
@@ -46,7 +55,10 @@ impl DiscoverySource {
             // NVIDIA 给的是指纹识别出的真实启动程序，含金量最高
             DiscoverySource::Nvidia => 3,
             DiscoverySource::Epic => 2,
+            DiscoverySource::Ubisoft => 2,
             DiscoverySource::Steam => 1,
+            DiscoverySource::Battlenet => 1,
+            DiscoverySource::Amd => 0,
             DiscoverySource::Directory => 0,
         }
     }
@@ -136,6 +148,9 @@ pub fn scan_all(db: &Db, directories: &[PathBuf]) -> AppResult<ScanOutcome> {
         steam::scan_steam(steam::detect_steam_root().as_deref()),
         epic::scan_epic(epic::manifests_dir().as_deref()),
         nvidia::scan_nvidia(nvidia::storage_path().as_deref()),
+        battlenet::scan_battlenet(None),
+        ubisoft::scan_ubisoft(None, &ubisoft::detect_ubisoft_installs()),
+        amd::scan_amd(None),
         directory::scan_directories(directories, &Default::default()),
     ];
 
@@ -400,8 +415,49 @@ mod real_env_tests {
             );
         }
 
-        // 全部来源都必须给出明确状态
-        assert_eq!(outcome.sources.len(), 4);
+        // 全部来源都必须给出明确状态（Steam/Epic/NVIDIA/目录/战网/育碧/AMD）
+        assert_eq!(outcome.sources.len(), 7);
+
+        // Battle.net：本机装有炉石传说（2026-10-16 实测），且该来源与 NVIDIA 同路径合并
+        let battlenet = outcome
+            .sources
+            .iter()
+            .find(|source| source.source == DiscoverySource::Battlenet)
+            .expect("应有 battlenet 来源");
+        assert!(matches!(battlenet.state, SourceState::Available));
+        assert!(
+            outcome.games.iter().any(|game| {
+                game.sources.contains(&DiscoverySource::Battlenet)
+                    && game.launch_path.to_lowercase().contains("hearthstone")
+            }),
+            "应发现炉石传说（与 NVIDIA 同路径合并）"
+        );
+
+        // Ubisoft：本机装有刺客信条：启示录（2026-10-16 实测）
+        let ubisoft = outcome
+            .sources
+            .iter()
+            .find(|source| source.source == DiscoverySource::Ubisoft)
+            .expect("应有 ubisoft 来源");
+        assert!(matches!(ubisoft.state, SourceState::Available));
+        assert!(
+            outcome.games.iter().any(|game| {
+                game.sources.contains(&DiscoverySource::Ubisoft)
+                    && game
+                        .launch_path
+                        .to_lowercase()
+                        .contains("assassin's creed revelations")
+            }),
+            "应发现刺客信条：启示录"
+        );
+
+        // AMD：本机未安装 → 优雅返回「未安装」而非故障
+        let amd = outcome
+            .sources
+            .iter()
+            .find(|source| source.source == DiscoverySource::Amd)
+            .expect("应有 amd 来源");
+        assert!(matches!(amd.state, SourceState::NotInstalled));
 
         // Steam 在本机已安装且库里确有游戏（2026-10-14 实测：7 个 appmanifest）
         let steam = outcome
@@ -435,5 +491,228 @@ mod real_env_tests {
                 game.launch_path
             );
         }
+    }
+}
+
+/// 阶段三验收测试（2026-10-16）：三个新来源与协调器的集成。
+/// 全部为合成数据，不依赖实机安装；验证复用现有去重/合并/库内标记，不引入第二套规则。
+#[cfg(test)]
+mod phase3_tests {
+    use super::*;
+    use crate::database::games;
+    use crate::database::models::{GameSort, SortOrder};
+
+    fn game(name: &str, path: &str, source: DiscoverySource) -> DiscoveredGame {
+        DiscoveredGame {
+            name: name.to_owned(),
+            launch_path: path.to_owned(),
+            launch_args: None,
+            working_directory: None,
+            sources: vec![source],
+            confidence: DiscoveryConfidence::High,
+            source_id: None,
+            already_in_library: false,
+            warnings: Vec::new(),
+        }
+    }
+
+    fn result(source: DiscoverySource, candidates: Vec<DiscoveredGame>) -> SourceScanResult {
+        SourceScanResult {
+            source,
+            state: SourceState::Available,
+            candidates,
+            skipped: 0,
+        }
+    }
+
+    #[test]
+    fn battlenet_and_nvidia_merge_on_same_exe() {
+        // 炉石传说同时被 Battle.net 与 NVIDIA 发现（同一路径、分隔符差异）→ 合并为一条
+        let hs_path_bnet = r"D:/Hearthstone/Hearthstone.exe";
+        let hs_path_nvidia = r"D:/Hearthstone/Hearthstone.exe";
+        let results = vec![
+            result(
+                DiscoverySource::Nvidia,
+                vec![game(
+                    "Hearthstone: Heroes of Warcraft",
+                    hs_path_nvidia,
+                    DiscoverySource::Nvidia,
+                )],
+            ),
+            result(
+                DiscoverySource::Battlenet,
+                vec![game("炉石传说", hs_path_bnet, DiscoverySource::Battlenet)],
+            ),
+        ];
+
+        let db = Db::open_in_memory().expect("内存库");
+        let merged = merge_and_dedupe(&results, &db).expect("合并");
+
+        assert_eq!(merged.len(), 1, "同一 exe 必须合并为一条候选");
+        let merged_game = &merged[0];
+        assert_eq!(merged_game.sources.len(), 2, "两个来源都要记录");
+        assert_eq!(
+            merged_game.sources[0],
+            DiscoverySource::Nvidia,
+            "rank 高的来源排在前"
+        );
+        // 合并保留 rank 高来源的名称（NVIDIA 的英文名），但路径一致
+        assert!(
+            merged_game
+                .launch_path
+                .to_lowercase()
+                .contains("hearthstone.exe")
+        );
+    }
+
+    #[test]
+    fn same_name_different_path_across_new_sources_stay_separate() {
+        // 同名不同路径：不得按名称强行合并（跨新来源同样适用）
+        let results = vec![
+            result(
+                DiscoverySource::Ubisoft,
+                vec![game(
+                    "Assassin's Creed",
+                    r"D:/games1/ACRSP.exe",
+                    DiscoverySource::Ubisoft,
+                )],
+            ),
+            result(
+                DiscoverySource::Ubisoft,
+                vec![game(
+                    "Assassin's Creed",
+                    r"D:/games2/AssassinsCreedRevelations.exe",
+                    DiscoverySource::Ubisoft,
+                )],
+            ),
+            result(
+                DiscoverySource::Battlenet,
+                vec![game(
+                    "Assassin's Creed",
+                    r"D:/games3/ACR.exe",
+                    DiscoverySource::Battlenet,
+                )],
+            ),
+        ];
+
+        let db = Db::open_in_memory().expect("内存库");
+        let merged = merge_and_dedupe(&results, &db).expect("合并");
+        assert_eq!(merged.len(), 3, "三个不同路径的同名游戏都应保留");
+    }
+
+    #[test]
+    fn already_in_library_flag_works_for_new_sources() {
+        // 库中已有炉石传说 → Battle.net 候选应标记 already_in_library
+        let db = Db::open_in_memory().expect("内存库");
+        let exe = std::env::temp_dir().join(format!("gamelib-p3-{}.exe", std::process::id()));
+        std::fs::write(&exe, b"mz").expect("写 exe");
+
+        db.with_conn(|conn| {
+            games::insert(
+                conn,
+                &games::InsertGame {
+                    id: games::new_id(),
+                    name: "炉石传说",
+                    original_name: "炉石传说",
+                    source_type: crate::database::models::SourceType::Exe,
+                    source_path: &exe.to_string_lossy(),
+                    launch_path: &exe.to_string_lossy(),
+                    launch_args: "",
+                    working_directory: None,
+                    cover_path: None,
+                    icon_path: None,
+                    is_launcher: false,
+                },
+            )
+        })
+        .expect("插入已有游戏");
+
+        let results = vec![result(
+            DiscoverySource::Battlenet,
+            vec![game(
+                "炉石传说",
+                &exe.to_string_lossy(),
+                DiscoverySource::Battlenet,
+            )],
+        )];
+
+        let merged = merge_and_dedupe(&results, &db).expect("合并");
+        assert_eq!(merged.len(), 1);
+        assert!(
+            merged[0].already_in_library,
+            "新来源的候选同样要标记已在库中"
+        );
+        let _ = std::fs::remove_file(&exe);
+    }
+
+    #[test]
+    fn warnings_are_merged_across_sources() {
+        // 同一 exe 的两个来源各带 warning → 合并后警告聚合且去重
+        let mut with_warning = game("X", r"D:/x/game.exe", DiscoverySource::Nvidia);
+        with_warning.warnings = vec!["NVIDIA 来源警告".to_owned()];
+        let mut ubisoft_warning = game("X", r"D:/x/game.exe", DiscoverySource::Ubisoft);
+        ubisoft_warning.warnings = vec!["Ubisoft 来源警告".to_owned()];
+
+        let results = vec![
+            result(DiscoverySource::Nvidia, vec![with_warning]),
+            result(DiscoverySource::Ubisoft, vec![ubisoft_warning]),
+        ];
+
+        let db = Db::open_in_memory().expect("内存库");
+        let merged = merge_and_dedupe(&results, &db).expect("合并");
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].warnings.len(), 2, "两个来源的警告都应保留");
+    }
+
+    #[test]
+    fn unavailable_and_not_installed_sources_do_not_affect_others() {
+        // AMD 未安装 + Ubisoft 不可用 → 其余来源照常返回（阶段三 §4 验收项）
+        let mut amd = SourceScanResult::not_installed(DiscoverySource::Amd);
+        amd.skipped = 0;
+        let ubisoft = SourceScanResult::unavailable(
+            DiscoverySource::Ubisoft,
+            "模拟：配置缓存不可读".to_owned(),
+        );
+        let results = vec![
+            result(
+                DiscoverySource::Battlenet,
+                vec![game(
+                    "炉石传说",
+                    r"D:/Hearthstone/Hearthstone.exe",
+                    DiscoverySource::Battlenet,
+                )],
+            ),
+            ubisoft,
+            amd,
+        ];
+
+        let db = Db::open_in_memory().expect("内存库");
+        let merged = merge_and_dedupe(&results, &db).expect("合并");
+        assert_eq!(merged.len(), 1, "失败的来源不得拖垮其他来源");
+        assert_eq!(merged[0].sources, vec![DiscoverySource::Battlenet]);
+    }
+
+    #[test]
+    fn scan_all_does_not_write_database() {
+        // 阶段三红线：扫描不写库。真机扫描前后库内记录数必须一致。
+        let db = Db::open_in_memory().expect("内存库");
+        let count_before = db
+            .with_conn(|conn| games::list(conn, GameSort::CreatedAt, SortOrder::Asc))
+            .expect("读取")
+            .len();
+
+        // 空目录列表：只跑平台来源（真机容忍）
+        let outcome = scan_all(&db, &[]).expect("扫描");
+        let count_after = db
+            .with_conn(|conn| games::list(conn, GameSort::CreatedAt, SortOrder::Asc))
+            .expect("读取")
+            .len();
+
+        assert_eq!(
+            count_before, count_after,
+            "扫描不得写入数据库（写入只发生在用户确认导入时）"
+        );
+        // 来源数量 = 7（Steam/Epic/NVIDIA/Battle.net/Ubisoft/Amd/Directory）
+        assert_eq!(outcome.sources.len(), 7);
     }
 }

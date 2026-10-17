@@ -44,6 +44,8 @@ pub fn run() {
             show_main_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -136,19 +138,19 @@ pub fn run() {
         })
         // 拦截主窗口关闭：按设置决定「隐藏到托盘」还是「真退出」
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
-                    let app = window.app_handle();
-                    let behavior = app.state::<commands::tray_settings::CloseBehavior>();
-                    let close_to_tray = *behavior
-                        .close_to_tray
-                        .read()
-                        .expect("close_to_tray 锁未被污染");
-                    if close_to_tray {
-                        api.prevent_close();
-                        let _ = window.hide();
-                        log::info!("窗口已隐藏到系统托盘");
-                    }
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == "main"
+            {
+                let app = window.app_handle();
+                let behavior = app.state::<commands::tray_settings::CloseBehavior>();
+                let close_to_tray = *behavior
+                    .close_to_tray
+                    .read()
+                    .expect("close_to_tray 锁未被污染");
+                if close_to_tray {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    log::info!("窗口已隐藏到系统托盘");
                 }
             }
         })

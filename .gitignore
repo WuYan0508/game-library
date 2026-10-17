@@ -26,3 +26,9 @@ dist-ssr
 # Tauri / Rust 构建产物（体积巨大，绝不入库）
 src-tauri/target
 src-tauri/gen/schemas
+
+# 更新签名私钥（绝不入库）
+.tauri-keys/
+
+# 本地发布材料（安装包不入库）
+release-v*/

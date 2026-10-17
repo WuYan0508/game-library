@@ -26,10 +26,11 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #14161b;
-  --bg-elevated: #1a1d24;
-  --surface: #1e222b;
-  --surface-hover: #252a35;
+  /* 磨砂玻璃：--bg 透明让 Acrylic 透出桌面，面板用半透明保证可读性 */
+  --bg: transparent;
+  --bg-elevated: rgba(26, 29, 36, 0.55);
+  --surface: rgba(30, 34, 43, 0.45);
+  --surface-hover: rgba(37, 42, 53, 0.6);
 
   --border: #2b313d;
   --border-strong: #3b4353;
@@ -37,16 +38,19 @@
   --text: #e9ebf0;
   --text-secondary: #a6aebd;
   --text-faint: #737d8f;
+
+  --bg-tint: #14161b;
+  --surface-solid: #1e222b;
 }
 
 /* 浅色 */
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #f4f5f7;
-  --bg-elevated: #ffffff;
-  --surface: #ffffff;
-  --surface-hover: #eceef2;
+  --bg: transparent;
+  --bg-elevated: rgba(255, 255, 255, 0.6);
+  --surface: rgba(255, 255, 255, 0.42);
+  --surface-hover: rgba(236, 238, 242, 0.62);
 
   --border: #d9dde5;
   --border-strong: #c3c9d4;
@@ -54,6 +58,9 @@
   --text: #1c2027;
   --text-secondary: #4a5261;
   --text-faint: #8a93a3;
+
+  --bg-tint: #f4f5f7;
+  --surface-solid: #ffffff;
 }
 
 
@@ -71,7 +78,8 @@ body,
 }
 
 body {
-  background: var(--bg);
+  /* 主题色淡染叠在 Acrylic 之上：既透出桌面，又保证与所选主题一致的文字对比度 */
+  background: color-mix(in srgb, var(--bg-tint) 45%, transparent);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;

@@ -227,8 +227,8 @@
 .dragged {
   opacity: 0.92;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  /* transform 不加过渡：跟随指针必须零延迟（过渡会让快速拖动时卡片落后于鼠标） */
   transition:
-    transform 0.08s linear,
     box-shadow 0.16s ease,
     opacity 0.16s ease;
 }

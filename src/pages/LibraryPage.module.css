@@ -5,6 +5,9 @@
 }
 
 .topBar {
+  /* 顶栏文字不可选中（与卡面一致，避免拖选） */
+  user-select: none;
+
   flex: none;
   display: flex;
   align-items: center;
@@ -88,6 +91,8 @@
 }
 
 .controls {
+  user-select: none;
+
   flex: none;
   display: flex;
   align-items: center;
@@ -194,4 +199,10 @@
 .recoveredBar .errorText {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+/* 搜索框内文字保持可选中（正常编辑行为） */
+.topBar input,
+.controls input {
+  user-select: text;
 }

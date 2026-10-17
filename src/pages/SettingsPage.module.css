@@ -21,7 +21,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
-  color: var(--text-secondary);
+  color: var(--text);
 }
 
 .backButton:hover {
@@ -54,7 +54,7 @@
   font-weight: 600;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--text);
 }
 
 .sectionBody {
@@ -88,7 +88,7 @@
 
 .settingDesc {
   font-size: 12px;
-  color: var(--text-faint);
+  color: var(--text);
 }
 
 /* 开关：轨道 + 圆形滑块 */
@@ -184,7 +184,7 @@
 .appearanceHint {
   font-size: 11px;
   line-height: 1.5;
-  color: var(--text-faint);
+  color: var(--text);
 }
 
 /* ---- 注意事项 ---- */
@@ -194,14 +194,14 @@
   padding: 14px 16px 14px 34px;
   font-size: 13px;
   line-height: 1.9;
-  color: var(--text-secondary);
+  color: var(--text);
 }
 
 .versionLine {
   margin: 26px 0 0;
   text-align: center;
   font-size: 12px;
-  color: var(--text-faint);
+  color: var(--text);
 }
 
 .actionButton {
@@ -228,6 +228,31 @@
   border-top: 1px solid var(--border);
   font-size: 12px;
   line-height: 1.7;
-  color: var(--text-secondary);
+  color: var(--text);
   word-break: break-all;
+}
+
+/* 检查更新 */
+.updateArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 34px;
+}
+
+.updateHint {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.updateFound {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.updateError {
+  font-size: 13px;
+  color: var(--danger);
 }
