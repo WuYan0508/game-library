@@ -148,3 +148,32 @@ mod tests {
         );
     }
 }
+
+/// 运行时切换窗口通透（Acrylic）效果。
+/// 关闭时由前端的不透明底色承担背景；开启时恢复磨砂玻璃。
+/// 注意：不在此处调整任何通透参数 —— Acrylic 的开启形态与 tauri.conf.json 完全一致。
+#[tauri::command]
+pub fn set_translucent(window: tauri::WebviewWindow, enabled: bool) -> Result<(), String> {
+    use tauri::utils::config::WindowEffectsConfig;
+    // 公开再导出路径：tauri::window::{Effect, EffectState}（tauri-utils 内部枚举为私有）
+    use tauri::window::{Effect as WindowEffect, EffectState as WindowEffectState};
+    let effects = if enabled {
+        WindowEffectsConfig {
+            effects: vec![WindowEffect::Acrylic],
+            state: Some(WindowEffectState::Active),
+            radius: None,
+            color: None,
+            ..Default::default()
+        }
+    } else {
+        // 空配置 = 移除窗口效果，背景由前端不透明底色承担
+        WindowEffectsConfig {
+            effects: vec![],
+            state: None,
+            radius: None,
+            color: None,
+            ..Default::default()
+        }
+    };
+    window.set_effects(effects).map_err(|err| err.to_string())
+}

@@ -3,7 +3,9 @@ import { getVersion } from "@tauri-apps/api/app";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import {
   getStoredAppearance,
+  getStoredTranslucent,
   setAppearance,
+  setTranslucent,
   type Appearance,
 } from "../services/theme";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -35,6 +37,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   );
   // null = 还在读取当前状态
   const [closeToTray, setCloseToTray] = useState<boolean | null>(null);
+  const [translucent, setTranslucentPref] = useState(getStoredTranslucent());
   const [version, setVersion] = useState<string | null>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [reextracting, setReextracting] = useState(false);
@@ -140,6 +143,12 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
     setAppearance(pref);
   }
 
+  /** 切换通透模式：持久化 + 同步窗口 Acrylic 与透明变量。 */
+  function changeTranslucent(enabled: boolean) {
+    setTranslucentPref(enabled);
+    setTranslucent(enabled);
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.topBar}>
@@ -239,6 +248,24 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                   <span className={styles.appearanceHint}>{option.hint}</span>
                 </button>
               ))}
+            </div>
+            <div className={styles.settingRow}>
+              <div className={styles.settingText}>
+                <span className={styles.settingLabel}>通透模式</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={translucent}
+                aria-label="通透模式"
+                title="开启后窗口背景透过桌面（Acrylic 磨砂）；关闭则为不透明背景"
+                className={
+                  translucent ? `${styles.switch} ${styles.switchOn}` : styles.switch
+                }
+                onClick={() => changeTranslucent(!translucent)}
+              >
+                <span className={styles.switchKnob} />
+              </button>
             </div>
           </div>
         </section>

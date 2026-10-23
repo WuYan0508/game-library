@@ -101,6 +101,16 @@ body {
   overflow: hidden;
 }
 
+/* 通透模式关闭：窗口背景改为不透明实色（覆盖层不引入任何新参数，
+   开启态的 --bg / Acrylic 参数保持原样）。 */
+:root[data-translucent="false"] {
+  --bg: var(--bg-tint);
+}
+
+:root[data-translucent="false"] body {
+  background: var(--bg-tint);
+}
+
 /* 滚动条完全隐藏：滚轮 / 触控板 / 键盘滚动不受影响，
    只是不再显示视觉滚动条（用户偏好，2026-10-15）。 */
 ::-webkit-scrollbar {

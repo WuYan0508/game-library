@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>反应力测试挑战</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<!-- 内置于游戏库的赛前热身小游戏；固定使用科技主题 -->
+<body data-theme="tech">
+
+  <!-- 页面主容器：居中布局，限制最大宽度 -->
+  <main class="container">
+
+    <!-- ========== 1. 页面标题 ========== -->
+    <header class="page-header">
+      <h1 class="title">反应力测试挑战</h1>
+      <p class="subtitle">等待屏幕变绿后，尽快点击测试区域！</p>
+    </header>
+
+    <!-- ========== 3. 难度选择区域 ========== -->
+    <section class="panel difficulty-panel" aria-label="难度选择">
+      <h2 class="panel-title">难度选择</h2>
+      <div class="btn-group" role="group" aria-label="选择难度">
+        <button type="button" class="opt-btn diff-btn" data-diff="easy">简单模式</button>
+        <button type="button" class="opt-btn diff-btn" data-diff="normal">普通模式</button>
+        <button type="button" class="opt-btn diff-btn" data-diff="hard">困难模式</button>
+      </div>
+      <p class="current-info">当前难度：<span id="currentDiffText">普通模式</span>　|　随机等待 <span id="currentDiffRange">1～4 秒</span></p>
+    </section>
+
+    <!-- ========== 4. 游戏测试区域 ========== -->
+    <!-- role="button" + tabindex 让它可以用键盘聚焦和空格触发；aria-live 让状态变化被读屏朗读 -->
+    <section id="gameArea" class="game-area state-idle" role="button" tabindex="0"
+             aria-live="polite" aria-label="反应力测试区域">
+      <div class="game-main-text" id="gameText">点击下方按钮开始测试</div>
+      <div class="game-sub-text" id="gameHint">提示：也可以按空格键操作</div>
+    </section>
+
+    <!-- 新纪录庆祝提示（默认隐藏） -->
+    <div id="celebrate" class="celebrate" aria-live="assertive">新纪录！</div>
+
+    <!-- ========== 5. 操作按钮 ========== -->
+    <section class="controls" aria-label="操作按钮">
+      <button type="button" id="startBtn" class="action-btn btn-primary">开始测试</button>
+      <button type="button" id="restartBtn" class="action-btn">重新测试</button>
+      <button type="button" id="clearBtn" class="action-btn btn-danger">清空成绩</button>
+      <button type="button" id="soundBtn" class="action-btn">声音：开</button>
+    </section>
+
+    <!-- ========== 6. 成绩统计区域（卡片布局） ========== -->
+    <section class="stats" aria-label="成绩统计">
+      <div class="stat-card">
+        <div class="stat-label">本次成绩</div>
+        <div class="stat-value" id="currentScore">暂无</div>
+        <div class="stat-sub" id="currentComment"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">最好成绩</div>
+        <div class="stat-value" id="bestScore">暂无成绩</div>
+        <div class="stat-sub" id="bestSub">当前难度</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">平均反应时间</div>
+        <div class="stat-value" id="avgScore">暂无数据</div>
+        <div class="stat-sub">所有有效成绩平均</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">有效测试次数</div>
+        <div class="stat-value" id="validCount">0</div>
+        <div class="stat-sub">抢跑不计入</div>
+      </div>
+    </section>
+
+    <!-- ========== 7. 最近五次成绩 ========== -->
+    <section class="panel recent-panel" aria-label="最近五次成绩">
+      <h2 class="panel-title">最近五次成绩</h2>
+      <ul class="recent-list" id="recentList">
+        <li class="recent-empty">还没有成绩，开始你的第一次测试吧！</li>
+      </ul>
+    </section>
+
+    <!-- ========== 8. 页脚简短说明 ========== -->
+    <footer class="page-footer">
+      <p>提示：可以按空格键代替点击测试区域，按回车键开始或重新测试。所有数据仅保存在你的浏览器本地。</p>
+    </footer>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -158,6 +158,7 @@ pub fn run() {
             commands::system::get_app_info,
             commands::system::get_app_data_path,
             commands::system::open_log_dir,
+            commands::system::set_translucent,
             commands::games::list_games,
             commands::games::get_game,
             commands::games::search_games,

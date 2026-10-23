@@ -1,0 +1,547 @@
+/* ============================================================
+   反应力测试挑战 - 样式表 style.css
+   分区目录：
+   1. 页面基础样式与重置
+   2. 主题变量（科技 / 太空 / 忍者）
+   3. 页面布局与标题
+   4. 面板与按钮组
+   5. 游戏测试区域与五种状态
+   6. 操作按钮
+   7. 成绩统计卡片
+   8. 最近五次成绩列表
+   9. 新纪录庆祝动画
+   10. 响应式布局（手机适配）
+   11. 减少动画设置（无障碍）
+   ============================================================ */
+
+
+/* ========== 1. 页面基础样式与重置 ========== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 游戏状态颜色是固定的，不随主题变化，放在 :root 里 */
+:root {
+  --state-idle: #3a4a5c;   /* 初始：灰蓝 */
+  --state-wait: #f59e0b;   /* 等待：橙色 */
+  --state-go:   #22c55e;   /* 可点击：绿色 */
+  --state-fail: #ef4444;   /* 抢跑：红色 */
+  --state-done: #3b82f6;   /* 完成：蓝色 */
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB",
+               "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+  /* 平滑过渡到主题背景 */
+  transition: background-color 0.4s ease, color 0.4s ease;
+  /* 防止手机端横向滚动 */
+  overflow-x: hidden;
+  min-height: 100dvh;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+button:focus-visible {
+  /* 用 outline 做焦点环，无障碍可见 */
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+
+/* ========== 2. 主题变量 ========== */
+
+/* 默认：科技主题（深蓝 + 青色） */
+body {
+  --bg: #0e1726;
+  --bg-card: #162033;
+  --bg-card-2: #1b2942;
+  --text: #e6f0ff;
+  --text-muted: #8aa0bd;
+  --accent: #00d4ff;
+  --accent-2: #2b6cff;
+  --border: rgba(0, 212, 255, 0.22);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* 太空主题（深紫黑 + 紫色 + 星光黄） */
+body[data-theme="space"] {
+  --bg: #07071f;
+  --bg-card: #14143a;
+  --bg-card-2: #1c1c52;
+  --text: #ece6ff;
+  --text-muted: #a394d0;
+  --accent: #c084fc;
+  --accent-2: #facc15;
+  --border: rgba(192, 132, 252, 0.25);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* 忍者主题（深褐 + 朱红 + 金） */
+body[data-theme="ninja"] {
+  --bg: #16100c;
+  --bg-card: #261b14;
+  --bg-card-2: #322318;
+  --text: #f3e8db;
+  --text-muted: #c2a488;
+  --accent: #d85a30;
+  --accent-2: #c9a14a;
+  --border: rgba(216, 90, 48, 0.3);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* 主题背景装饰（用纯 CSS 模拟，不依赖外部图片） */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* 科技主题：青色网格线 */
+body[data-theme="tech"]::before {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* 太空主题：星点（多重 radial-gradient 模拟星星） */
+body[data-theme="space"]::before {
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, #fff6 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 60%, #fff5 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 40% 80%, #facc15aa 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 20%, #fff5 50%, transparent 51%),
+    radial-gradient(1px 1px at 10% 70%, #c084fcaa 50%, transparent 51%);
+  background-size: 100% 100%;
+}
+
+/* 忍者主题：朱红斜纹 */
+body[data-theme="ninja"]::before {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(216, 90, 48, 0.05) 0,
+    rgba(216, 90, 48, 0.05) 2px,
+    transparent 2px,
+    transparent 22px
+  );
+}
+
+
+/* ========== 3. 页面布局与标题 ========== */
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 18px 40px;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle {
+  margin-top: 8px;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+
+/* ========== 4. 面板与按钮组 ========== */
+
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  padding-left: 10px;
+  border-left: 3px solid var(--accent);
+}
+
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* 主题/难度选择按钮的通用样式 */
+.opt-btn {
+  flex: 1 1 auto;
+  min-width: 96px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.opt-btn:hover {
+  background: var(--accent);
+  color: #0b0b0b;
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.opt-btn:active {
+  transform: translateY(0);
+}
+
+/* 选中状态：用 accent 描边 + 半透明背景 */
+.opt-btn.active {
+  background: var(--accent);
+  color: #0b0b0b;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* 测试进行中，难度按钮不可修改 */
+.opt-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.current-info {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.current-info span {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+
+/* ========== 5. 游戏测试区域与五种状态 ========== */
+
+.game-area {
+  width: 100%;
+  min-height: 240px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px 20px;
+  margin-bottom: 18px;
+  cursor: pointer;
+  user-select: none;
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow);
+  transition: background-color 0.25s ease, transform 0.15s ease, border-color 0.25s ease;
+}
+
+.game-area:hover {
+  transform: translateY(-2px);
+}
+
+.game-area:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.game-area:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.game-main-text {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.game-sub-text {
+  margin-top: 10px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* 五种状态颜色（覆盖背景） */
+.game-area.state-idle { background: var(--state-idle); }
+.game-area.state-wait { background: var(--state-wait); }
+.game-area.state-go   { background: var(--state-go); }
+.game-area.state-fail { background: var(--state-fail); }
+.game-area.state-done { background: var(--state-done); }
+
+/* 变绿时加一个轻微脉冲，提示玩家立刻点击 */
+.game-area.state-go {
+  animation: goPulse 0.6s ease;
+}
+@keyframes goPulse {
+  0%   { transform: scale(0.98); }
+  50%  { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+
+/* ========== 6. 操作按钮 ========== */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.action-btn {
+  flex: 1 1 auto;
+  min-width: 120px;
+  padding: 13px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: transform 0.15s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.action-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 主按钮（开始测试）：用 accent 高亮 */
+.btn-primary {
+  background: var(--accent);
+  color: #0b0b0b;
+  border-color: var(--accent);
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+  border-color: var(--accent);
+}
+
+/* 危险按钮（清空成绩）：用红色提示 */
+.btn-danger {
+  color: #ffd9d9;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+.btn-danger:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+
+/* ========== 7. 成绩统计卡片 ========== */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 12px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  word-break: break-word;
+}
+
+.stat-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  min-height: 16px;
+}
+
+
+/* ========== 8. 最近五次成绩列表 ========== */
+
+.recent-list {
+  list-style: none;
+}
+
+.recent-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+}
+
+.recent-list li:last-child {
+  border-bottom: none;
+}
+
+.recent-list li:hover {
+  background: var(--bg-card-2);
+}
+
+.recent-time {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.recent-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.recent-empty {
+  justify-content: center !important;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+
+/* ========== 9. 新纪录庆祝动画 ========== */
+
+.celebrate {
+  display: none;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent-2);
+  margin: -6px 0 14px;
+  letter-spacing: 2px;
+}
+
+/* show 时触发动画 */
+.celebrate.show {
+  display: block;
+  animation: celebratePop 1.2s ease;
+}
+
+@keyframes celebratePop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  30%  { transform: scale(1.2); opacity: 1; }
+  60%  { transform: scale(1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+
+/* ========== 10. 响应式布局（手机适配） ========== */
+
+/* 平板及以下：统计卡片改为 2 列 */
+@media (max-width: 600px) {
+  .container {
+    padding: 20px 14px 32px;
+  }
+  .title {
+    font-size: 27px;
+    letter-spacing: 1px;
+  }
+  .subtitle {
+    font-size: 14px;
+  }
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .game-area {
+    min-height: 200px;
+    padding: 24px 16px;
+  }
+  .game-main-text {
+    font-size: 24px;
+  }
+  .game-sub-text {
+    font-size: 13px;
+  }
+  .action-btn {
+    min-width: 100%;
+  }
+  .opt-btn {
+    min-width: 100%;
+  }
+  .btn-group {
+    flex-direction: column;
+  }
+}
+
+/* 很窄的屏幕 */
+@media (max-width: 360px) {
+  .title { font-size: 23px; }
+  .game-main-text { font-size: 20px; }
+  .stat-value { font-size: 20px; }
+}
+
+
+/* ========== 11. 减少动画设置（无障碍） ========== */
+/* 当用户系统设置了"减少动画"，关闭所有装饰性动画 */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .game-area:hover,
+  .action-btn:hover,
+  .opt-btn:hover {
+    transform: none;
+  }
+}

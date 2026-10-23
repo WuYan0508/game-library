@@ -16,6 +16,9 @@
     "core:window:allow-start-dragging",
     "autostart:default",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-set-focus",
+    "core:window:allow-show"
   ]
 }

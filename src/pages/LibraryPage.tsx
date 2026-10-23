@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AddGameDialog from "../components/AddGameDialog";
 import ScanDialog from "../components/ScanDialog";
+import WarmupDialog from "../components/WarmupDialog";
 import GameGrid from "../components/GameGrid";
 import GameDetailDialog from "../components/GameDetailDialog";
 import { useGames } from "../hooks/useGames";
@@ -49,6 +50,7 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
   }, [order]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [warmupOpen, setWarmupOpen] = useState(false);
   const [detailGame, setDetailGame] = useState<Game | null>(null);
 
   useEffect(() => {
@@ -151,6 +153,14 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
           placeholder="搜索游戏"
           aria-label="搜索游戏"
         />
+
+        <button
+          className={styles.ghostButton}
+          type="button"
+          onClick={() => setWarmupOpen(true)}
+        >
+          赛前热身
+        </button>
 
         <button
           className={styles.ghostButton}
@@ -284,6 +294,10 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
           onClose={() => setScanDialogOpen(false)}
           onImported={reload}
         />
+      )}
+
+      {warmupOpen && (
+        <WarmupDialog onClose={() => setWarmupOpen(false)} />
       )}
     </div>
   );

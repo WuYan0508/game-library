@@ -9,8 +9,14 @@ interface ChangelogEntry {
 /** 每个版本只记录「新增的功能」，修改与修复不在此列出。 */
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.23",
+    version: "1.24",
     current: true,
+    items: [
+      "新增「赛前热身」：内置反应力测试小游戏，在独立小窗打开，不占用游戏库",
+    ],
+  },
+  {
+    version: "1.23",
     items: [
       "游戏详情新增「更改图标」：选择 EXE 提取其图标，或使用 ICO / PNG / JPG / WebP 图片",
       "游戏详情新增「更改启动目标」：游戏搬家后无需删掉重加，直接更新启动位置",
