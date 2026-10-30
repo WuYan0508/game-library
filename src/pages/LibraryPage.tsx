@@ -5,6 +5,7 @@ import WarmupDialog from "../components/WarmupDialog";
 import GameGrid from "../components/GameGrid";
 import GameDetailDialog from "../components/GameDetailDialog";
 import { useGames } from "../hooks/useGames";
+import { setGamepadLayer, type GamepadAction } from "../services/gamepad";
 import { toUserMessage } from "../services/errorMessages";
 import { pushToast } from "../services/toastStore";
 import { gameApi } from "../services/gameApi";
@@ -52,6 +53,8 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [warmupOpen, setWarmupOpen] = useState(false);
   const [detailGame, setDetailGame] = useState<Game | null>(null);
+  // 手柄导航：当前聚焦的卡面 id；null = 未使用手柄
+  const [gamepadFocusId, setGamepadFocusId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(
@@ -107,6 +110,106 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
     },
     [sort, reload],
   );
+
+  // 手柄导航（层 1）：方向在卡面网格间移动（基于矩形的空间导航，自动适配列数），
+  // A 启动 / Y 详情 / B 返回 / 菜单键=设置。任何弹窗打开时挂起手柄导航。
+  useEffect(() => {
+    setGamepadLayer("library-grid", (action: GamepadAction) => {
+      if (addDialogOpen || scanDialogOpen || warmupOpen || detailGame !== null) {
+        return;
+      }
+      if (action === "menu") {
+        onOpenSettings();
+        return;
+      }
+      if (action === "back") {
+        if (keyword) {
+          setKeyword("");
+        } else {
+          setGamepadFocusId(null);
+        }
+        return;
+      }
+      if (action === "confirm" || action === "detail") {
+        if (gamepadFocusId === null) {
+          return;
+        }
+        const focused = games.find((game) => game.id === gamepadFocusId);
+        if (!focused) {
+          return;
+        }
+        if (action === "confirm") {
+          handleLaunch(focused);
+        } else {
+          setDetailGame(focused);
+        }
+        return;
+      }
+      // 方向移动
+      setGamepadFocusId((currentId) => {
+        const cards = Array.from(
+          document.querySelectorAll<HTMLElement>("[data-card-id]"),
+        );
+        if (cards.length === 0) {
+          return null;
+        }
+        const ids = cards.map((card) => card.dataset.cardId ?? "");
+        const currentIndex =
+          currentId !== null ? ids.indexOf(currentId) : -1;
+        if (currentIndex === -1) {
+          return ids[0]; // 尚无焦点：聚焦第一张卡
+        }
+        const currentRect = cards[currentIndex].getBoundingClientRect();
+        const cx = currentRect.left + currentRect.width / 2;
+        const cy = currentRect.top + currentRect.height / 2;
+        let best: number | null = null;
+        let bestScore = Number.POSITIVE_INFINITY;
+        cards.forEach((card, index) => {
+          if (index === currentIndex) {
+            return;
+          }
+          const rect = card.getBoundingClientRect();
+          const dx = rect.left + rect.width / 2 - cx;
+          const dy = rect.top + rect.height / 2 - cy;
+          if (action === "right" && dx <= 4) return;
+          if (action === "left" && dx >= -4) return;
+          if (action === "down" && dy <= 4) return;
+          if (action === "up" && dy >= -4) return;
+          const score =
+            action === "left" || action === "right"
+              ? Math.abs(dy) * 3 + Math.abs(dx)
+              : Math.abs(dx) * 3 + Math.abs(dy);
+          if (score < bestScore) {
+            bestScore = score;
+            best = index;
+          }
+        });
+        return best !== null ? ids[best] : currentId;
+      });
+    });
+    // 订阅随弹窗开关与数据变化重建，保证闭包拿到最新状态
+    // 弹窗打开时本层仍注册在栈里，但弹窗层压在其上接管 —— 此处的弹窗判断是双保险
+  }, [
+    addDialogOpen,
+    scanDialogOpen,
+    warmupOpen,
+    detailGame,
+    games,
+    gamepadFocusId,
+    keyword,
+    handleLaunch,
+    onOpenSettings,
+  ]);
+
+  // 手柄焦点变化时把卡面滚入视野
+  useEffect(() => {
+    if (gamepadFocusId === null) {
+      return;
+    }
+    document
+      .querySelector(`[data-card-id="${gamepadFocusId}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [gamepadFocusId]);
 
   const handleRemove = useCallback(
     async (game: Game) => {
@@ -270,6 +373,7 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
             onOpen={setDetailGame}
             onReorder={(orderedIds) => void handleReorder(orderedIds)}
             dragEnabled={!searching}
+            gamepadFocusId={gamepadFocusId}
           />
         )}
 

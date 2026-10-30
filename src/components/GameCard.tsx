@@ -20,6 +20,8 @@ interface GameCardProps {
   /** 长按拖拽的视觉状态（由 GameGrid 协调）。 */
   isDragged: boolean;
   isDropTarget: boolean;
+  /** 手柄导航焦点（层 1）。 */
+  isGamepadFocused?: boolean;
   /** 被拖卡片相对按下位置的偏移（跟随动画）；非拖拽时为 null。 */
   dragOffset: { x: number; y: number } | null;
   /** 指针按下时上报给 GameGrid（进入长按拖拽流程）。 */
@@ -40,6 +42,7 @@ export default function GameCard({
   onOpen,
   isDragged,
   isDropTarget,
+  isGamepadFocused,
   dragOffset,
   onCardPointerDown,
 }: GameCardProps) {
@@ -84,6 +87,7 @@ export default function GameCard({
         running && styles.cardRunning,
         isDragged && styles.dragged,
         isDropTarget && styles.dropTarget,
+        isGamepadFocused && styles.gamepadFocus,
       ]
         .filter(Boolean)
         .join(" ")}

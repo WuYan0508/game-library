@@ -4,7 +4,7 @@
  * 打开所在位置（opener 插件在资源管理器中定位文件）。
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { open } from "@tauri-apps/plugin-dialog";
 import { describeError, gameApi } from "../services/gameApi";
@@ -12,6 +12,7 @@ import { toUserMessage } from "../services/errorMessages";
 import { pushToast } from "../services/toastStore";
 import { formatPlayTime } from "../utils/format";
 import Cover from "./Cover";
+import { useGamepadDialog } from "../hooks/useGamepadDialog";
 import type { Game } from "../types/game";
 const EXE_FILTERS = [{ name: "可执行文件", extensions: ["exe"] }];
 const ICON_SOURCE_FILTERS = [
@@ -41,6 +42,7 @@ export default function GameDetailDialog({
   onClose,
   onUpdated,
 }: GameDetailDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState(game.name);
   const [saving, setSaving] = useState(false);
   const [retargeting, setRetargeting] = useState(false);
@@ -139,9 +141,11 @@ export default function GameDetailDialog({
     }
   }
 
+  useGamepadDialog(dialogRef, { onBack: onClose });
+
   return (
     <div className={styles.backdrop} role="presentation">
-      <div className={styles.dialog} role="dialog" aria-modal="true" aria-label="游戏详情">
+      <div ref={dialogRef} className={styles.dialog} role="dialog" aria-modal="true" aria-label="游戏详情">
         <header className={styles.header}>
           <h2 className={styles.title}>游戏详情</h2>
           <button

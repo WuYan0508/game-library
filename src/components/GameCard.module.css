@@ -269,3 +269,9 @@
 .moreButton:hover {
   background: rgba(0, 0, 0, 0.72);
 }
+
+/* 手柄导航焦点环 */
+.gamepadFocus {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}

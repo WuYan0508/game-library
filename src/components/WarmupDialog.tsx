@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useGamepadDialog } from "../hooks/useGamepadDialog";
 import styles from "./WarmupDialog.module.css";
 
 interface WarmupGame {
@@ -52,6 +53,8 @@ async function openGameWindow(game: WarmupGame) {
 
 export default function WarmupDialog({ onClose }: { onClose: () => void }) {
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useGamepadDialog(dialogRef, { onBack: onClose });
 
   async function handleOpen(game: WarmupGame) {
     setOpeningId(game.id);
@@ -65,6 +68,7 @@ export default function WarmupDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className={styles.backdrop} role="presentation">
       <div
+        ref={dialogRef}
         className={styles.dialog}
         role="dialog"
         aria-modal="true"

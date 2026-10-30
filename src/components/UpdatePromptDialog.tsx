@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { type Update } from "@tauri-apps/plugin-updater";
 import { downloadAndInstallUpdate } from "../services/updater";
 import { toUserMessage } from "../services/errorMessages";
+import { useGamepadDialog } from "../hooks/useGamepadDialog";
 import styles from "./UpdatePromptDialog.module.css";
 
 type Phase = "prompt" | "downloading" | "installing" | "error";
@@ -18,6 +19,7 @@ export default function UpdatePromptDialog({
   update: Update;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<Phase>("prompt");
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +43,16 @@ export default function UpdatePromptDialog({
   }
 
   const busy = phase === "downloading" || phase === "installing";
+  useGamepadDialog(dialogRef, {
+    onBack: onClose,
+    // 下载/安装进行中禁用手柄操作，防止误关弹窗
+    enabled: !busy,
+  });
 
   return (
     <div className={styles.backdrop} role="presentation">
       <div
+        ref={dialogRef}
         className={styles.dialog}
         role="dialog"
         aria-modal="true"

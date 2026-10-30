@@ -22,6 +22,8 @@ interface GameGridProps {
   onReorder: (orderedIds: string[]) => void;
   /** 搜索过滤时禁用拖拽（过滤视图无法给出完整顺序）。 */
   dragEnabled: boolean;
+  /** 手柄导航当前聚焦的卡面 id；null = 未使用手柄。 */
+  gamepadFocusId?: string | null;
 }
 
 /** 长按进入拖拽所需的时间（毫秒）。 */
@@ -48,6 +50,7 @@ export default function GameGrid({
   onOpen,
   onReorder,
   dragEnabled,
+  gamepadFocusId,
 }: GameGridProps) {
   // 视觉状态：正在拖的卡 / 当前悬停的目标卡
   const [dragId, setDragId] = useState<string | null>(null);
@@ -414,6 +417,7 @@ export default function GameGrid({
           onOpen={onOpen}
           isDragged={dragId === game.id}
           isDropTarget={dragId !== null && overId === game.id}
+          isGamepadFocused={gamepadFocusId === game.id}
           dragOffset={dragId === game.id ? dragOffset : null}
           onCardPointerDown={onCardPointerDown}
         />

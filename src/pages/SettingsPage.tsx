@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import {
@@ -8,7 +8,12 @@ import {
   setTranslucent,
   type Appearance,
 } from "../services/theme";
+import {
+  getStoredGamepadEnabled,
+  setGamepadEnabled,
+} from "../services/gamepad";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useGamepadDialog } from "../hooks/useGamepadDialog";
 import { gameApi } from "../services/gameApi";
 import { toUserMessage } from "../services/errorMessages";
 import { pushToast } from "../services/toastStore";
@@ -30,6 +35,9 @@ const APPEARANCE_OPTIONS: Array<{
 ];
 
 export default function SettingsPage({ onBack }: SettingsPageProps) {
+  const pageRef = useRef<HTMLDivElement>(null);
+  // 设置页手柄层：上下在按钮/开关间移动焦点，A 激活，B 返回游戏库
+  useGamepadDialog(pageRef, { onBack });
   // null = 还在读取当前状态
   const [autoStart, setAutoStart] = useState<boolean | null>(null);
   const [appearance, setAppearancePref] = useState<Appearance>(
@@ -38,6 +46,9 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   // null = 还在读取当前状态
   const [closeToTray, setCloseToTray] = useState<boolean | null>(null);
   const [translucent, setTranslucentPref] = useState(getStoredTranslucent());
+  const [gamepadControl, setGamepadControlPref] = useState(
+    getStoredGamepadEnabled(),
+  );
   const [version, setVersion] = useState<string | null>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [reextracting, setReextracting] = useState(false);
@@ -149,8 +160,14 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
     setTranslucent(enabled);
   }
 
+  /** 切换手柄控制：持久化并启停轮询。 */
+  function changeGamepadControl(enabled: boolean) {
+    setGamepadEnabled(enabled);
+    setGamepadControlPref(enabled);
+  }
+
   return (
-    <div className={styles.page}>
+    <div ref={pageRef} className={styles.page}>
       <header className={styles.topBar}>
         <button className={styles.backButton} type="button" onClick={onBack}>
           ← 返回游戏库
@@ -263,6 +280,28 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                   translucent ? `${styles.switch} ${styles.switchOn}` : styles.switch
                 }
                 onClick={() => changeTranslucent(!translucent)}
+              >
+                <span className={styles.switchKnob} />
+              </button>
+            </div>
+            <div className={styles.settingRow}>
+              <div className={styles.settingText}>
+                <span className={styles.settingLabel}>手柄控制</span>
+                <span className={styles.settingDesc}>
+                  使用手柄导航游戏库：方向键 / 左摇杆选择，A 启动，Y 详情，B 返回，菜单键打开设置
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={gamepadControl}
+                aria-label="手柄控制"
+                className={
+                  gamepadControl
+                    ? `${styles.switch} ${styles.switchOn}`
+                    : styles.switch
+                }
+                onClick={() => changeGamepadControl(!gamepadControl)}
               >
                 <span className={styles.switchKnob} />
               </button>
