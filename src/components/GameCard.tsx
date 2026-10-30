@@ -50,10 +50,26 @@ export default function GameCard({
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const resetTimer = useRef<number | null>(null);
 
+  // 启动动画：launching → running 交界的「已启动」对勾描边，1.6s 后淡出回到常规运行态
+  const [launchDone, setLaunchDone] = useState(false);
+  const prevRunning = useRef(running);
+  const doneTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!prevRunning.current && running) {
+      setLaunchDone(true);
+      doneTimer.current = window.setTimeout(() => {
+        setLaunchDone(false);
+        doneTimer.current = null;
+      }, 1600);
+    }
+    prevRunning.current = running;
+  }, [running]);
+
   useEffect(() => {
     return () => {
-      if (resetTimer.current !== null) {
-        window.clearTimeout(resetTimer.current);
+      if (doneTimer.current !== null) {
+        window.clearTimeout(doneTimer.current);
       }
     };
   }, []);
@@ -112,6 +128,59 @@ export default function GameCard({
       </button>
 
       <div className={styles.coverButton}>
+        {launching && (
+          <div className={styles.launchOverlay}>
+            <svg
+              className={styles.launchSpinner}
+              width="44"
+              height="44"
+              viewBox="0 0 44 44"
+            >
+              <circle cx="22" cy="22" r="18" fill="none" stroke="#3b4353" strokeWidth="4" />
+              <circle
+                cx="22"
+                cy="22"
+                r="18"
+                fill="none"
+                stroke="#4c8dff"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray="30 84"
+              />
+            </svg>
+            <span className={styles.launchOverlayText}>正在启动…</span>
+          </div>
+        )}
+        {launchDone && (
+          <div className={styles.doneBadge}>
+            <svg width="44" height="44" viewBox="0 0 40 40">
+              <circle
+                className={styles.doneRing}
+                cx="20"
+                cy="20"
+                r="17"
+                fill="none"
+                stroke="#4fb477"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray="107"
+                strokeDashoffset="107"
+              />
+              <path
+                className={styles.doneCheck}
+                d="M12 20 L18 26 L28 14"
+                fill="none"
+                stroke="#4fb477"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="24.5"
+                strokeDashoffset="24.5"
+              />
+            </svg>
+            <span className={styles.doneLabel}>已启动</span>
+          </div>
+        )}
         <Cover game={game} />
       </div>
 

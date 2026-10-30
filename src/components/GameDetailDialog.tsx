@@ -141,7 +141,13 @@ export default function GameDetailDialog({
     }
   }
 
-  useGamepadDialog(dialogRef, { onBack: onClose });
+  useGamepadDialog(dialogRef, {
+    onBack: onClose,
+    hints: [
+      { key: "A", label: "确认" },
+      { key: "B", label: "关闭" },
+    ],
+  });
 
   return (
     <div className={styles.backdrop} role="presentation">

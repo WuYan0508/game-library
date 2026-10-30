@@ -1,5 +1,5 @@
 import { useEffect, type RefObject } from "react";
-import { setGamepadLayer } from "../services/gamepad";
+import { setGamepadLayer, type GamepadHint } from "../services/gamepad";
 
 const FOCUSABLE =
   "button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex='-1'])";
@@ -13,9 +13,14 @@ const FOCUSABLE =
  */
 export function useGamepadDialog(
   containerRef: RefObject<HTMLElement | null>,
-  opts: { onBack?: () => void; enabled?: boolean } = {},
+  opts: {
+    onBack?: () => void;
+    enabled?: boolean;
+    /** 本界面的提示条文案（跟随手柄层显示在底部）。 */
+    hints?: GamepadHint[];
+  } = {},
 ): void {
-  const { onBack, enabled = true } = opts;
+  const { onBack, enabled = true, hints = [] } = opts;
 
   useEffect(() => {
     if (!enabled) {
@@ -61,7 +66,7 @@ export function useGamepadDialog(
         onBack?.();
       }
       // left / right / detail / menu：弹窗内不使用
-    });
+    }, hints);
 
     // 初始焦点：容器内第一个可交互元素
     const list = focusables();
@@ -70,7 +75,7 @@ export function useGamepadDialog(
     }
 
     return () => {
-      setGamepadLayer(layerId, null);
+      setGamepadLayer(layerId, null, []);
     };
     // onBack 由调用方内联传入；弹窗关闭即卸载本层，无需追求闭包常驻新鲜
   }, [containerRef, enabled, onBack]);

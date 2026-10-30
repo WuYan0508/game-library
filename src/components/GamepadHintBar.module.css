@@ -1,0 +1,40 @@
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 10px 20px;
+  background: rgba(10, 12, 16, 0.88);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.padBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f2f3f5;
+  color: #17191d;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text);
+}

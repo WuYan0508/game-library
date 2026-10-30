@@ -47,6 +47,10 @@ export default function UpdatePromptDialog({
     onBack: onClose,
     // 下载/安装进行中禁用手柄操作，防止误关弹窗
     enabled: !busy,
+    hints: [
+      { key: "A", label: "立即更新" },
+      { key: "B", label: "稍后再说" },
+    ],
   });
 
   return (

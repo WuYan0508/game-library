@@ -1,6 +1,6 @@
 [package]
 name = "game-library"
-version = "1.24.0"
+version = "2.0.0"
 description = "Windows 个人游戏库（手动导入版）"
 authors = ["wuayn"]
 edition = "2024"

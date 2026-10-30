@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ToastHost from "./components/Toast";
 import TitleBar from "./components/TitleBar";
 import UpdatePromptDialog from "./components/UpdatePromptDialog";
+import GamepadHintBar from "./components/GamepadHintBar";
 import LibraryPage from "./pages/LibraryPage";
 import SettingsPage from "./pages/SettingsPage";
 import styles from "./App.module.css";
@@ -47,6 +48,7 @@ export default function App() {
             onClose={() => setPendingUpdate(null)}
           />
         )}
+        <GamepadHintBar />
         <ToastHost />
       </main>
     </div>

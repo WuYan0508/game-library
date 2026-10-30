@@ -27,13 +27,37 @@ const REPEAT_DELAY = 450;
 const REPEAT_INTERVAL = 150;
 /** 方向切换的边缘冷却：吸收十字键抖动，避免一次按键连跳多格。 */
 const EDGE_COOLDOWN = 90;
+/** 手柄停止输入多久后视为闲置（提示条隐藏）。 */
+const GAMEPAD_IDLE_MS = 3000;
 
 type Handler = (action: GamepadAction) => void;
 
+/** 提示条的单个按键提示。 */
+export interface GamepadHint {
+  /** 按键徽标文字，如 "A"、"Y"、"≡"。 */
+  key: string;
+  /** 动作说明，如 "启动"。 */
+  label: string;
+}
+
 /** 手柄处理器分层栈：后注册的在最上层，只有栈顶接收操作。
  *  用稳定 id 注册（如 "library-grid"、"dialog-detail"）——
- *  更新同 id 只替换处理器、不改变层级，避免重渲染时层级乱跳。 */
-const stack: { id: string; handler: Handler }[] = [];
+ *  更新同 id 只替换处理器与提示、不改变层级，避免重渲染时层级乱跳。
+ *  每层携带自己的提示条文案，提示条组件跟随栈顶层显示。 */
+const stack: { id: string; handler: Handler; hints: GamepadHint[] }[] = [];
+
+let connectedState = false;
+/** 手柄最近一次输入的时间戳（performance.now）。 */
+let lastGamepadAt = 0;
+/** 鼠标 / 键盘最近一次输入的时间戳（用于判断用户是否切回了键鼠）。 */
+let lastExternalAt = 0;
+/** 手柄处于活跃操作状态（有输入且未闲置超时）。 */
+let padActive = false;
+const stateHandlers = new Set<() => void>();
+
+function notifyState(): void {
+  stateHandlers.forEach((handler) => handler());
+}
 // 模块加载即从存储初始化：否则重启后开关显示开着、轮询却永远不会启动
 let enabled = localStorage.getItem(STORAGE_KEY) === "true";
 let rafId: number | null = null;
@@ -62,7 +86,11 @@ export function getConnectedGamepadName(): string | null {
  * 注册/更新/移除一层手柄处理器。
  * 传 handler = 注册（新 id 压栈顶，已有 id 原位替换）；传 null = 移除该层。
  */
-export function setGamepadLayer(id: string, handler: Handler | null): void {
+export function setGamepadLayer(
+  id: string,
+  handler: Handler | null,
+  hints: GamepadHint[] = [],
+): void {
   const index = stack.findIndex((entry) => entry.id === id);
   if (handler === null) {
     if (index >= 0) {
@@ -70,37 +98,91 @@ export function setGamepadLayer(id: string, handler: Handler | null): void {
     }
   } else if (index >= 0) {
     stack[index].handler = handler;
+    stack[index].hints = hints;
   } else {
-    stack.push({ id, handler });
+    stack.push({ id, handler, hints });
   }
   if (stack.length > 0) {
     start();
   } else {
     stop();
   }
+  notifyState();
 }
 
 export function setGamepadEnabled(value: boolean): void {
   localStorage.setItem(STORAGE_KEY, value ? "true" : "false");
   enabled = value;
   if (!enabled) {
+    connectedState = false;
+    padActive = false;
     stop();
   } else {
     start();
   }
+  notifyState();
+}
+
+/** 当前手柄状态快照（供提示条组件渲染）。 */
+export interface GamepadState {
+  enabled: boolean;
+  connected: boolean;
+  /** 手柄正在被操作（有输入且未闲置超时）——提示条据此显隐。 */
+  active: boolean;
+  /** 栈顶层的提示文案；空栈为 null。 */
+  hints: GamepadHint[] | null;
+}
+
+export function getGamepadState(): GamepadState {
+  const top = stack.length > 0 ? stack[stack.length - 1] : null;
+  return {
+    enabled,
+    connected: connectedState,
+    active: padActive,
+    hints: top ? top.hints : null,
+  };
+}
+
+/** 订阅手柄状态变化（启用开关 / 连接与断开 / 层切换）。 */
+export function onGamepadState(handler: () => void): () => void {
+  stateHandlers.add(handler);
+  return () => stateHandlers.delete(handler);
 }
 
 function emit(action: GamepadAction): void {
   if (stack.length === 0) {
     return;
   }
+  lastGamepadAt = performance.now();
+  if (!padActive) {
+    padActive = true;
+    notifyState();
+  }
   stack[stack.length - 1].handler(action);
+}
+
+let externalListening = false;
+
+/** 键鼠输入标记：用户切回键鼠后提示条自动隐藏。 */
+function listenExternalInput(): void {
+  if (externalListening) {
+    return;
+  }
+  externalListening = true;
+  const mark = () => {
+    lastExternalAt = performance.now();
+  };
+  window.addEventListener("pointermove", mark, { passive: true });
+  window.addEventListener("pointerdown", mark, { passive: true });
+  window.addEventListener("keydown", mark, { passive: true });
+  window.addEventListener("wheel", mark, { passive: true });
 }
 
 function start(): void {
   if (rafId !== null || !enabled || stack.length === 0) {
     return;
   }
+  listenExternalInput();
   rafId = requestAnimationFrame(poll);
 }
 
@@ -126,12 +208,28 @@ function poll(): void {
   const pads = Array.from(navigator.getGamepads?.() ?? []).filter(
     (pad): pad is Gamepad => pad !== null,
   );
+  const now = performance.now();
+  const connectedNow = pads.length > 0;
+  if (connectedNow !== connectedState) {
+    connectedState = connectedNow;
+    notifyState();
+  }
   if (pads.length === 0) {
     heldDir = null;
     prevButtons = [];
+    if (padActive) {
+      padActive = false;
+      notifyState();
+    }
     return;
   }
   const pad = pads[0];
+  const padActiveNow =
+    lastGamepadAt >= lastExternalAt && now - lastGamepadAt < GAMEPAD_IDLE_MS;
+  if (padActiveNow !== padActive) {
+    padActive = padActiveNow;
+    notifyState();
+  }
 
   // 方向：十字键优先，左摇杆叠加（死区 0.5）
   const ax = pad.axes[0] ?? 0;
@@ -143,7 +241,6 @@ function poll(): void {
   else if (pressed(12) || ay <= -DEADZONE) dir = "up";
   else if (pressed(13) || ay >= DEADZONE) dir = "down";
 
-  const now = performance.now();
   if (dir !== null) {
     const isEdge = dir !== heldDir;
     if (isEdge && now - lastMoveAt < EDGE_COOLDOWN) {

@@ -1240,7 +1240,7 @@ dependencies = [
 
 [[package]]
 name = "game-library"
-version = "1.24.0"
+version = "2.0.0"
 dependencies = [
  "chrono",
  "image",

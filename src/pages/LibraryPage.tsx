@@ -5,7 +5,19 @@ import WarmupDialog from "../components/WarmupDialog";
 import GameGrid from "../components/GameGrid";
 import GameDetailDialog from "../components/GameDetailDialog";
 import { useGames } from "../hooks/useGames";
-import { setGamepadLayer, type GamepadAction } from "../services/gamepad";
+import {
+  setGamepadLayer,
+  type GamepadAction,
+  type GamepadHint,
+} from "../services/gamepad";
+
+/** 库页面网格的手柄提示条文案。 */
+const GRID_HINTS: GamepadHint[] = [
+  { key: "A", label: "启动" },
+  { key: "Y", label: "详情" },
+  { key: "B", label: "返回" },
+  { key: "≡", label: "设置" },
+];
 import { toUserMessage } from "../services/errorMessages";
 import { pushToast } from "../services/toastStore";
 import { gameApi } from "../services/gameApi";
@@ -114,7 +126,9 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
   // 手柄导航（层 1）：方向在卡面网格间移动（基于矩形的空间导航，自动适配列数），
   // A 启动 / Y 详情 / B 返回 / 菜单键=设置。任何弹窗打开时挂起手柄导航。
   useEffect(() => {
-    setGamepadLayer("library-grid", (action: GamepadAction) => {
+    setGamepadLayer(
+      "library-grid",
+      (action: GamepadAction) => {
       if (addDialogOpen || scanDialogOpen || warmupOpen || detailGame !== null) {
         return;
       }
@@ -186,7 +200,7 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
         });
         return best !== null ? ids[best] : currentId;
       });
-    });
+    }, GRID_HINTS);
     // 订阅随弹窗开关与数据变化重建，保证闭包拿到最新状态
     // 弹窗打开时本层仍注册在栈里，但弹窗层压在其上接管 —— 此处的弹窗判断是双保险
   }, [

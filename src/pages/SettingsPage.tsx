@@ -37,7 +37,13 @@ const APPEARANCE_OPTIONS: Array<{
 export default function SettingsPage({ onBack }: SettingsPageProps) {
   const pageRef = useRef<HTMLDivElement>(null);
   // 设置页手柄层：上下在按钮/开关间移动焦点，A 激活，B 返回游戏库
-  useGamepadDialog(pageRef, { onBack });
+  useGamepadDialog(pageRef, {
+    onBack,
+    hints: [
+      { key: "A", label: "确认" },
+      { key: "B", label: "返回" },
+    ],
+  });
   // null = 还在读取当前状态
   const [autoStart, setAutoStart] = useState<boolean | null>(null);
   const [appearance, setAppearancePref] = useState<Appearance>(

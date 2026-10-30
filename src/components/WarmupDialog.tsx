@@ -54,7 +54,13 @@ async function openGameWindow(game: WarmupGame) {
 export default function WarmupDialog({ onClose }: { onClose: () => void }) {
   const [openingId, setOpeningId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  useGamepadDialog(dialogRef, { onBack: onClose });
+  useGamepadDialog(dialogRef, {
+    onBack: onClose,
+    hints: [
+      { key: "A", label: "打开" },
+      { key: "B", label: "关闭" },
+    ],
+  });
 
   async function handleOpen(game: WarmupGame) {
     setOpeningId(game.id);
