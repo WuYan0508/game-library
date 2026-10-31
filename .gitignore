@@ -32,3 +32,6 @@ src-tauri/gen/schemas
 
 # 本地发布材料（安装包不入库）
 release-v*/
+
+# GitHub 发布 Token（绝不入库）
+.gh-token
