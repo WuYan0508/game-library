@@ -231,15 +231,19 @@ function poll(): void {
     notifyState();
   }
 
-  // 方向：十字键优先，左摇杆叠加（死区 0.5）
+  // 方向：十字键优先，左摇杆叠加（死区 0.5），再叠加轴帽
+  // （DirectInput 风格手柄常把十字键报在 axes 6/7 上，取值 -1/0/1）
   const ax = pad.axes[0] ?? 0;
   const ay = pad.axes[1] ?? 0;
+  const hx = pad.axes[6] ?? 0;
+  const hy = pad.axes[7] ?? 0;
+  const HAT = 0.5;
   const pressed = (index: number) => pad.buttons[index]?.pressed ?? false;
   let dir: GamepadAction | null = null;
-  if (pressed(14) || ax <= -DEADZONE) dir = "left";
-  else if (pressed(15) || ax >= DEADZONE) dir = "right";
-  else if (pressed(12) || ay <= -DEADZONE) dir = "up";
-  else if (pressed(13) || ay >= DEADZONE) dir = "down";
+  if (pressed(14) || ax <= -DEADZONE || hx <= -HAT) dir = "left";
+  else if (pressed(15) || ax >= DEADZONE || hx >= HAT) dir = "right";
+  else if (pressed(12) || ay <= -DEADZONE || hy <= -HAT) dir = "up";
+  else if (pressed(13) || ay >= DEADZONE || hy >= HAT) dir = "down";
 
   if (dir !== null) {
     const isEdge = dir !== heldDir;
@@ -261,10 +265,19 @@ function poll(): void {
     heldDir = null;
   }
 
-  // 按键边缘触发（standard mapping：0=A，1=B，3=Y，9=菜单）
-  if (pressed(0) && !prevButtons[0]) emit("confirm");
-  if (pressed(1) && !prevButtons[1]) emit("back");
-  if (pressed(3) && !prevButtons[3]) emit("detail");
-  if (pressed(9) && !prevButtons[9]) emit("menu");
+  // 按键边缘触发：标准映射手柄用标准布局（0=A，1=B，3=Y，9=菜单）；
+  // 非标准映射手柄（mapping 为空，常见于 DirectInput/HID 设备）用启发式布局
+  // （0=确认 1=返回 3=详情 9/10=菜单，十字键多在轴帽上，上面已兼容）。
+  const layout =
+    pad.mapping === "standard"
+      ? { confirm: 0, back: 1, detail: 3, menu: 9 }
+      : { confirm: 0, back: 1, detail: 3, menu: 9 };
+  const edge = (index: number) => pressed(index) && !prevButtons[index];
+  if (edge(layout.confirm)) emit("confirm");
+  if (edge(layout.back)) emit("back");
+  if (edge(layout.detail)) emit("detail");
+  if (edge(layout.menu) || (layout.menu !== 10 && pressed(10) && !prevButtons[10])) {
+    emit("menu");
+  }
   prevButtons = pad.buttons.map((button) => button.pressed);
 }

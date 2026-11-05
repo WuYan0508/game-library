@@ -32,14 +32,13 @@ npm run tauri build
 - `platforms.windows-x86_64.url`：指向 Release 资产（安装包建议用 ASCII 名，
   如 `GameLibrary_1.3.0_x64-setup.exe`，避免中文 URL 转义问题）
 
-## 4. 上传到 GitHub Release
+## 4. 上传到 GitHub Release（已自动化）
 
-在 `github.com/WuYan0508/game-library` 新建 Release（tag 如 `v1.3.0`），上传：
+Token 已配置（仓库根 `.gh-token`，gitignore 保护）。改版本号、打包、生成
+`release-v<版本>/` 后，由 agent 通过 GitHub API 直接完成：创建 Release + 上传
+`latest.json` 与 ASCII 名安装包 —— 无需再手动操作浏览器。
 
-1. `latest.json` ← 必须有，更新检查就读它
-2. ASCII 名的安装包 exe
-
-共 2 个文件。用户端应用启动 3 秒后会自动发现新版本并提示。
+（手动备用：浏览器打开 `releases/new?tag=v<版本>`，上传同样两个文件。）
 
 ## 5. 更新日志
 

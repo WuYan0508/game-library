@@ -307,3 +307,11 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* 手柄测试面板 */
+.testerWrap {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface);
+}

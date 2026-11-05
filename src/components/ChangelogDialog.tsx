@@ -9,8 +9,15 @@ interface ChangelogEntry {
 /** 每个版本只记录「新增的功能」，修改与修复不在此列出。 */
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "2.0",
+    version: "2.1",
     current: true,
+    items: [
+      "手柄多类型适配：兼容 DirectInput 风格十字键（轴帽）与非标准映射手柄",
+      "设置页新增手柄测试面板：实时显示手柄名称、布局与全部按键 / 摇杆状态",
+    ],
+  },
+  {
+    version: "2.0",
     items: [
       "新增手柄控制：方向键 / 左摇杆导航游戏库，A 启动游戏，Y 打开详情，B 返回",
       "手柄操作时底部显示按键提示条，切回键鼠自动隐藏",

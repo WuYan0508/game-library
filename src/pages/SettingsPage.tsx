@@ -9,9 +9,11 @@ import {
   type Appearance,
 } from "../services/theme";
 import {
+  getConnectedGamepadName,
   getStoredGamepadEnabled,
   setGamepadEnabled,
 } from "../services/gamepad";
+import GamepadTester from "../components/GamepadTester";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useGamepadDialog } from "../hooks/useGamepadDialog";
 import { gameApi } from "../services/gameApi";
@@ -55,6 +57,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   const [gamepadControl, setGamepadControlPref] = useState(
     getStoredGamepadEnabled(),
   );
+  const [gamepadName, setGamepadName] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [reextracting, setReextracting] = useState(false);
@@ -171,6 +174,14 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
     setGamepadEnabled(enabled);
     setGamepadControlPref(enabled);
   }
+
+  // 手柄连接状态实时显示（每秒刷新；浏览器需按一次手柄键才会激活连接）
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setGamepadName(getConnectedGamepadName());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div ref={pageRef} className={styles.page}>
@@ -312,6 +323,18 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                 <span className={styles.switchKnob} />
               </button>
             </div>
+            {gamepadControl && (
+              <p className={styles.settingDesc}>
+                {gamepadName
+                  ? `已连接：${gamepadName}`
+                  : "未检测到手柄 —— 请确认手柄已连接，并在应用聚焦时按一下任意手柄键"}
+              </p>
+            )}
+            {gamepadControl && (
+              <div className={styles.testerWrap}>
+                <GamepadTester />
+              </div>
+            )}
           </div>
         </section>
 
