@@ -9,8 +9,15 @@ interface ChangelogEntry {
 /** 每个版本只记录「新增的功能」，修改与修复不在此列出。 */
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "2.1",
+    version: "2.2",
     current: true,
+    items: [
+      "设置页新增独立「手柄控制」分区（含连接状态与实时测试面板）",
+      "修复：托盘隐藏期间系统休眠恢复后，点击托盘图标窗口可能不可见",
+    ],
+  },
+  {
+    version: "2.1",
     items: [
       "手柄多类型适配：兼容 DirectInput 风格十字键（轴帽）与非标准映射手柄",
       "设置页新增手柄测试面板：实时显示手柄名称、布局与全部按键 / 摇杆状态",

@@ -301,6 +301,12 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                 <span className={styles.switchKnob} />
               </button>
             </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>手柄控制</h2>
+          <div className={styles.sectionBody}>
             <div className={styles.settingRow}>
               <div className={styles.settingText}>
                 <span className={styles.settingLabel}>手柄控制</span>
@@ -404,7 +410,10 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
             <div className={styles.settingRow}>
               <div className={styles.settingText}>
                 <span className={styles.settingLabel}>查看各版本新增内容</span>
-                <span className={styles.settingDesc}>只记录新增的功能，当前版本 1.2</span>
+                <span className={styles.settingDesc}>
+                  只记录新增的功能，当前版本{" "}
+                  {version ? version.replace(/\.0$/, "") : "未知"}
+                </span>
               </div>
               <button
                 className={styles.actionButton}

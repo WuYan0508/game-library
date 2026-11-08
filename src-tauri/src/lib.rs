@@ -186,11 +186,35 @@ pub fn run() {
 }
 
 /// 显示并聚焦主窗口（托盘菜单 / 左键单击共用）。
+///
+/// 已知问题：窗口在托盘隐藏期间经历系统休眠/恢复后，WebView2 可能不重渲染 ——
+/// 窗口在 Win32 层面是可见的（任务栏有图标），但因背景透明而视觉上完全消失。
+/// 因此从「隐藏」状态恢复时，额外做一次强制重渲染：
+/// ① webview 级可见性循环（hide → show，强制 WebView2 合成器恢复）；
+/// ② 1px 尺寸抖动（WM_SIZE → 重新布局，双保险）。
+/// 两者都只在窗口此前不可见时执行，避免正常的点击聚焦产生闪烁。
 fn show_main_window(app: &tauri::AppHandle) {
     use tauri::Manager;
     if let Some(window) = app.get_webview_window("main") {
+        let was_visible = window.is_visible().unwrap_or(false);
+        let was_minimized = window.is_minimized().unwrap_or(false);
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+        if !was_visible {
+            // WebviewWindow 可 AsRef<Webview>：webview 级可见性循环（区别于窗口级 hide/show）
+            let webview: &tauri::Webview<_> = window.as_ref();
+            let _ = webview.hide();
+            let _ = webview.show();
+            if let Ok(size) = window.outer_size() {
+                let _ = window.set_size(tauri::PhysicalSize::new(size.width, size.height + 1));
+                let _ = window.set_size(tauri::PhysicalSize::new(size.width, size.height));
+            }
+            log::info!(
+                "托盘恢复：窗口此前不可见，已触发重渲染（was_minimized={was_minimized}）"
+            );
+        } else {
+            log::info!("托盘点击：窗口已可见，仅聚焦");
+        }
     }
 }
