@@ -177,3 +177,25 @@ pub fn set_translucent(window: tauri::WebviewWindow, enabled: bool) -> Result<()
     };
     window.set_effects(effects).map_err(|err| err.to_string())
 }
+
+/// 内存优化结果（camelCase 给前端）。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemOptimizeResult {
+    pub before_mb: u64,
+    pub after_mb: u64,
+    pub freed_mb: u64,
+}
+
+/// 执行内存优化：拉起提权子进程完成 Mem Reduct 同款三步清理。
+#[tauri::command]
+pub fn mem_optimize() -> AppResult<MemOptimizeResult> {
+    let (before_mb, after_mb) = crate::memclean::optimize_with_elevation()
+        .map_err(AppError::invalid_argument)?;
+    let freed_mb = after_mb.saturating_sub(before_mb);
+    Ok(MemOptimizeResult {
+        before_mb,
+        after_mb,
+        freed_mb,
+    })
+}

@@ -142,6 +142,11 @@ export const gameApi = {
     });
   },
 
+  /** 内存优化（触发提权子进程，Mem Reduct 同款三步清理）。 */
+  memOptimize(): Promise<{ beforeMb: number; afterMb: number; freedMb: number }> {
+    return invoke("mem_optimize");
+  },
+
   /** 重新提取图标。提不到会返回 null（前端回退占位图）。 */
   extractGameIcon(gameId: string): Promise<{ iconPath: string | null }> {
     return invoke<{ iconPath: string | null }>("extract_game_icon", { gameId });

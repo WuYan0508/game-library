@@ -64,6 +64,7 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [warmupOpen, setWarmupOpen] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
   const [detailGame, setDetailGame] = useState<Game | null>(null);
   // 手柄导航：当前聚焦的卡面 id；null = 未使用手柄
   const [gamepadFocusId, setGamepadFocusId] = useState<string | null>(null);
@@ -122,6 +123,25 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
     },
     [sort, reload],
   );
+
+  /** 内存优化：触发提权子进程执行三步清理，完成后 Toast 释放量。 */
+  async function handleMemOptimize() {
+    if (optimizing) {
+      return;
+    }
+    setOptimizing(true);
+    try {
+      const result = await gameApi.memOptimize();
+      pushToast(
+        `内存优化完成：释放 ${result.freedMb} MB（${result.beforeMb} → ${result.afterMb}）`,
+        "info",
+      );
+    } catch (err) {
+      pushToast(toUserMessage(err));
+    } finally {
+      setOptimizing(false);
+    }
+  }
 
   // 手柄导航（层 1）：方向在卡面网格间移动（基于矩形的空间导航，自动适配列数），
   // A 启动 / Y 详情 / B 返回 / 菜单键=设置。任何弹窗打开时挂起手柄导航。
@@ -293,6 +313,16 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
           onClick={() => setAddDialogOpen(true)}
         >
           添加游戏
+        </button>
+
+        <button
+          className={styles.ghostButton}
+          type="button"
+          disabled={optimizing}
+          title="清理进程工作集、系统缓存与备用页列表（需要管理员权限）"
+          onClick={() => void handleMemOptimize()}
+        >
+          {optimizing ? "优化中…" : "优化"}
         </button>
 
         <button

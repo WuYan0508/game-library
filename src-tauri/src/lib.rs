@@ -12,6 +12,7 @@ pub mod covers;
 pub mod database;
 pub mod discovery;
 pub mod error;
+pub mod memclean;
 pub mod importer;
 pub mod launcher;
 pub mod platform;
@@ -159,6 +160,7 @@ pub fn run() {
             commands::system::get_app_data_path,
             commands::system::open_log_dir,
             commands::system::set_translucent,
+            commands::system::mem_optimize,
             commands::games::list_games,
             commands::games::get_game,
             commands::games::search_games,
@@ -183,6 +185,11 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// 提权子进程入口：执行内存清理并写结果文件。
+pub fn mem_clean_child(result_path: Option<&str>) -> i32 {
+    memclean::child_entry(result_path)
 }
 
 /// 显示并聚焦主窗口（托盘菜单 / 左键单击共用）。
