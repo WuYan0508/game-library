@@ -13,12 +13,18 @@ use crate::tracker::session::{ActiveSessionDto, SessionEnded, SessionManager, Se
 /// 失败返回结构化错误；同一游戏已有活动会话时返回 `AlreadyRunning`。
 #[tauri::command]
 pub fn launch_game(
+    app: tauri::AppHandle,
     db: State<'_, Db>,
     sessions: State<'_, SessionManager>,
     game_id: String,
 ) -> AppResult<SessionStarted> {
     let game = db.with_conn(|conn| games::get(conn, &game_id))?;
-    sessions.start(&game)
+    let started = sessions.start(&game);
+    if started.is_ok() {
+        // 最近启动列表变化 —— 刷新托盘菜单
+        crate::update_tray_menu(&app);
+    }
+    started
 }
 
 /// 当前正在被跟踪的会话。

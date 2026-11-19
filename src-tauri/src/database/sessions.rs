@@ -192,6 +192,21 @@ pub fn list_running(conn: &Connection) -> AppResult<Vec<PlaySession>> {
 }
 
 /// 按 id 查询会话。
+/// 最近启动过的 N 个游戏 id（按最近一次会话时间倒序，去重）。
+/// 游戏被移除时会话级联删除，因此不会出现孤儿条目。
+pub fn recent_game_ids(conn: &Connection, limit: i64) -> AppResult<Vec<String>> {
+    let mut stmt = conn.prepare(
+        "SELECT game_id, MAX(started_at) AS last_start FROM play_sessions \
+         GROUP BY game_id ORDER BY last_start DESC LIMIT ?1",
+    )?;
+    let rows = stmt.query_map(rusqlite::params![limit], |row| row.get::<_, String>(0))?;
+    let mut ids = Vec::new();
+    for row in rows {
+        ids.push(row?);
+    }
+    Ok(ids)
+}
+
 pub fn get(conn: &Connection, id: &str) -> AppResult<PlaySession> {
     let sql = format!(
         "SELECT {} FROM play_sessions WHERE id = ?1",

@@ -220,26 +220,34 @@ pub fn optimize_with_elevation() -> Result<(u64, u64, Option<String>), String> {
             return Err("已取消 —— 未授予管理员权限".into());
         }
         let wait = WaitForSingleObject(handle, CHILD_WAIT_TIMEOUT_MS);
-        let _ = CloseHandle(handle);
         if wait == WAIT_TIMEOUT {
+            let _ = CloseHandle(handle);
             return Err("内存优化超时".into());
         }
 
+        // 先读退出码（注意：必须在 CloseHandle 之前）
         let mut exit_code = 1u32;
         let _ = GetExitCodeProcess(handle, &mut exit_code);
-        let raw = std::fs::read_to_string(&result_path).map_err(|_| "未读取到清理结果")?;
+        let _ = CloseHandle(handle);
+
+        // 结果文件是权威信息源 —— 子进程失败时也写入了具体 error，优先展示它
+        let raw = std::fs::read_to_string(&result_path).map_err(|_| {
+            format!("未读取到清理结果（子进程退出码 {exit_code}）")
+        })?;
         let _ = std::fs::remove_file(&result_path);
         let parsed: serde_json::Value =
             serde_json::from_str(raw.trim()).map_err(|_| "清理结果格式异常")?;
         if let Some(error) = parsed.get("error").and_then(|v| v.as_str()) {
-            return Err(format!("内存优化失败：{error}"));
+            return Err(error.to_string());
         }
-        if exit_code != 0 {
-            return Err(format!("内存优化子进程异常退出（{exit_code}）"));
-        }
+
         let before = parsed.get("before").and_then(|v| v.as_u64()).ok_or("结果缺少 before")?;
         let after = parsed.get("after").and_then(|v| v.as_u64()).ok_or("结果缺少 after")?;
         let warn = parsed.get("warn").and_then(|v| v.as_str()).map(String::from);
+        if exit_code != 0 {
+            // 有结果但退出码非 0：结果可用，仍按异常报告
+            return Err(format!("子进程异常退出（{exit_code}），但清理已部分完成"));
+        }
         Ok((before, after, warn))
     }
 }

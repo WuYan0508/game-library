@@ -113,10 +113,17 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .tooltip("游戏库")
-                .on_menu_event(|app, event| match event.id().as_ref() {
-                    "open" => show_main_window(app),
-                    "quit" => app.exit(0),
-                    _ => {}
+                .on_menu_event(|app, event| {
+                    let id = event.id().as_ref();
+                    if let Some(game_id) = id.strip_prefix("launch:") {
+                        launch_from_tray(app, game_id);
+                    } else {
+                        match id {
+                            "open" => show_main_window(app),
+                            "quit" => app.exit(0),
+                            _ => {}
+                        }
+                    }
                 })
                 .on_tray_icon_event(|tray, event| {
                     // 左键单击 = 显示主窗口（与常见托盘应用一致）
@@ -133,6 +140,7 @@ pub fn run() {
                 tray = tray.icon(icon.clone());
             }
             tray.build(app)?;
+            update_tray_menu(app.handle());
             log::info!("系统托盘已就绪");
 
             Ok(())
@@ -200,6 +208,108 @@ pub fn mem_clean_child(result_path: Option<&str>) -> i32 {
 /// ① webview 级可见性循环（hide → show，强制 WebView2 合成器恢复）；
 /// ② 1px 尺寸抖动（WM_SIZE → 重新布局，双保险）。
 /// 两者都只在窗口此前不可见时执行，避免正常的点击聚焦产生闪烁。
+/// 重建托盘菜单：最近启动的游戏（带图标，最多 5 个）+ 打开游戏库 + 退出。
+/// 在应用启动与每次成功启动游戏后调用。
+pub fn update_tray_menu(app: &tauri::AppHandle) {
+    use tauri::menu::{IconMenuItem, MenuItem, MenuBuilder};
+    use tauri::Manager;
+
+    let Some(tray) = app.tray_by_id("main-tray") else {
+        return;
+    };
+
+    let recent_games: Vec<crate::database::models::Game> = match app.try_state::<crate::database::Db>() {
+        Some(db) => db
+            .with_conn(|conn| {
+                let ids = crate::database::sessions::recent_game_ids(conn, 5)?;
+                Ok(ids
+                    .iter()
+                    .filter_map(|id| crate::database::games::get(conn, id).ok())
+                    .collect::<Vec<_>>())
+            })
+            .unwrap_or_default(),
+        None => Vec::new(),
+    };
+
+    let mut builder = MenuBuilder::new(app);
+
+    // 最近启动的游戏放在最上（Steam 式）
+    let mut has_recent = false;
+    for game in &recent_games {
+        let item_id = format!("launch:{}", game.id);
+        let built = IconMenuItem::with_id(
+            app,
+            &item_id,
+            &game.name,
+            true,
+            load_menu_icon(app, &game.icon_path),
+            None::<&str>,
+        );
+        match built {
+            Ok(item) => {
+                builder = builder.item(&item);
+                has_recent = true;
+            }
+            Err(err) => log::warn!("构建最近游戏菜单项失败: {err}"),
+        }
+    }
+    if has_recent {
+        builder = builder.separator();
+    }
+
+    match MenuItem::with_id(app, "open", "打开游戏库", true, None::<&str>) {
+        Ok(item) => builder = builder.item(&item),
+        Err(err) => log::warn!("构建托盘菜单项失败: {err}"),
+    }
+
+    builder = builder.separator();
+
+    match MenuItem::with_id(app, "quit", "退出", true, None::<&str>) {
+        Ok(item) => builder = builder.item(&item),
+        Err(err) => log::warn!("构建托盘菜单项失败: {err}"),
+    }
+
+    match builder.build() {
+        Ok(menu) => {
+            if let Err(err) = tray.set_menu(Some(menu)) {
+                log::warn!("更新托盘菜单失败: {err}");
+            }
+        }
+        Err(err) => log::warn!("构建托盘菜单失败: {err}"),
+    }
+}
+
+/// 从托盘菜单启动游戏（复用会话管理器的启动逻辑，计时照常）。
+fn launch_from_tray(app: &tauri::AppHandle, game_id: &str) {
+    use tauri::Manager;
+    let db = app.state::<crate::database::Db>();
+    let sessions = app.state::<crate::SessionManager>();
+    match crate::commands::sessions::launch_game(app.clone(), db, sessions, game_id.to_string()) {
+        Ok(_) => {
+            update_tray_menu(app);
+        }
+        Err(err) => log::warn!("托盘启动游戏失败: {}", err.message()),
+    }
+}
+
+/// 加载游戏图标并缩放为托盘菜单尺寸（32×32 RGBA）。
+fn load_menu_icon(
+    app: &tauri::AppHandle,
+    icon_path: &Option<String>,
+) -> Option<tauri::image::Image<'static>> {
+    let relative = icon_path.as_ref()?;
+    let data_dir = crate::commands::app_data_dir(app).ok()?;
+    let bytes = std::fs::read(data_dir.join(relative)).ok()?;
+    let decoded = image::load_from_memory(&bytes).ok()?;
+    let resized = image::imageops::resize(
+        &decoded,
+        32,
+        32,
+        image::imageops::FilterType::Triangle,
+    );
+    Some(tauri::image::Image::new_owned(resized.into_raw(), 32, 32))
+}
+
 fn show_main_window(app: &tauri::AppHandle) {
     use tauri::Manager;
     if let Some(window) = app.get_webview_window("main") {
