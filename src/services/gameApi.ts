@@ -142,8 +142,8 @@ export const gameApi = {
     });
   },
 
-  /** 内存优化（触发提权子进程，Mem Reduct 同款三步清理）。 */
-  memOptimize(): Promise<{ beforeMb: number; afterMb: number; freedMb: number }> {
+  /** 内存优化（触发提权子进程，Mem Reduct 同款三步清理）。warn = 部分步骤失败说明。 */
+  memOptimize(): Promise<{ beforeMb: number; afterMb: number; freedMb: number; warn?: string }> {
     return invoke("mem_optimize");
   },
 
