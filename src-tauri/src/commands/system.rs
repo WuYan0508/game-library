@@ -185,17 +185,20 @@ pub struct MemOptimizeResult {
     pub before_mb: u64,
     pub after_mb: u64,
     pub freed_mb: u64,
+    /// 部分清理步骤失败的说明；全部成功为 null。
+    pub warn: Option<String>,
 }
 
 /// 执行内存优化：拉起提权子进程完成 Mem Reduct 同款三步清理。
 #[tauri::command]
 pub fn mem_optimize() -> AppResult<MemOptimizeResult> {
-    let (before_mb, after_mb) = crate::memclean::optimize_with_elevation()
+    let (before_mb, after_mb, warn) = crate::memclean::optimize_with_elevation()
         .map_err(AppError::invalid_argument)?;
     let freed_mb = after_mb.saturating_sub(before_mb);
     Ok(MemOptimizeResult {
         before_mb,
         after_mb,
         freed_mb,
+        warn,
     })
 }

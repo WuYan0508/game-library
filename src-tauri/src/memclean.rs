@@ -28,8 +28,10 @@ const SYSTEM_FILE_CACHE_INFORMATION: i32 = 21;
 const MEMORY_EMPTY_WORKING_SETS: i32 = 2;
 /// SystemMemoryListInformation 命令：清除备用页列表。
 const MEMORY_PURGE_STANDBY_LIST: i32 = 4;
-/// SeProfileSingleProcessPrivilege 的特权索引。
-const SE_PROFILE_SINGLE_PROCESS_PRIVILEGE: u32 = 11;
+/// SeProfileSingleProcessPrivilege 的特权 LUID 索引（winnt.h 表）。
+const SE_PROFILE_SINGLE_PROCESS_PRIVILEGE: u32 = 13;
+/// SeIncreaseQuotaPrivilege 的特权 LUID 索引（收缩系统缓存工作集需要）。
+const SE_INCREASE_QUOTA_PRIVILEGE: u32 = 5;
 /// 提权子进程等待超时（毫秒）。
 const CHILD_WAIT_TIMEOUT_MS: u32 = 20_000;
 
@@ -64,18 +66,32 @@ fn ntdll_proc(name: &str) -> Option<*const core::ffi::c_void> {
     }
 }
 
-/// 启用 SeProfileSingleProcessPrivilege。
-fn enable_profile_single_process_privilege() -> Result<(), String> {
+/// 启用单个特权（LUID 索引）。
+fn enable_privilege(privilege: u32) -> Result<(), String> {
     let proc_addr = ntdll_proc("RtlAdjustPrivilege").ok_or("未找到 RtlAdjustPrivilege（ntdll）")?;
     let rtl_adjust_privilege: RtlAdjustPrivilegeFn = unsafe { std::mem::transmute(proc_addr) };
     let mut was_enabled = 0i32;
-    let status = unsafe {
-        rtl_adjust_privilege(SE_PROFILE_SINGLE_PROCESS_PRIVILEGE, 1, 0, &mut was_enabled)
-    };
+    let status = unsafe { rtl_adjust_privilege(privilege, 1, 0, &mut was_enabled) };
     if status != 0 {
-        return Err(format!("启用 SeProfileSingleProcessPrivilege 失败（NTSTATUS 0x{status:08X}）"));
+        return Err(format!("启用特权 {privilege} 失败（NTSTATUS 0x{status:08X}）"));
     }
     Ok(())
+}
+
+/// 启用清理所需的全部特权：备用页清理要 SeProfileSingleProcessPrivilege，
+/// 系统缓存收缩要 SeIncreaseQuotaPrivilege。
+fn enable_needed_privileges() -> Result<(), String> {
+    let mut errors = Vec::new();
+    for privilege in [SE_PROFILE_SINGLE_PROCESS_PRIVILEGE, SE_INCREASE_QUOTA_PRIVILEGE] {
+        if let Err(err) = enable_privilege(privilege) {
+            errors.push(err);
+        }
+    }
+    if errors.len() == 2 {
+        Err(errors.join("；"))
+    } else {
+        Ok(())
+    }
 }
 
 /// NtSetSystemInformation 封装。
@@ -89,14 +105,18 @@ fn nt_set_system_information(class: i32, info: *mut core::ffi::c_void, len: u32)
     Ok(())
 }
 
-/// 执行三步清理（需要已具备管理员权限）。
-fn perform_clean() -> Result<(u64, u64), String> {
-    enable_profile_single_process_privilege()?;
+/// 执行三步清理（需要已具备管理员权限）。返回 (优化前, 优化后, 失败步骤)。
+/// 每步独立容错：单步失败不影响其余步骤，全部失败才视为整体失败。
+fn perform_clean() -> Result<(u64, u64, Vec<String>), String> {
+    enable_needed_privileges()?;
     let before = available_mb();
+    let mut warnings = Vec::new();
 
     // 1) 清空全部进程工作集
     let command = MEMORY_EMPTY_WORKING_SETS;
-    nt_set_system_information(SYSTEM_MEMORY_LIST_INFORMATION, &command as *const i32 as *mut _, std::mem::size_of::<i32>() as u32)?;
+    if let Err(err) = nt_set_system_information(SYSTEM_MEMORY_LIST_INFORMATION, &command as *const i32 as *mut _, std::mem::size_of::<i32>() as u32) {
+        warnings.push(format!("进程工作集清理失败（{err}）"));
+    }
 
     // 2) 收缩系统缓存工作集（最小/最大工作集设为 SIZE_MAX）
     #[repr(C)]
@@ -110,16 +130,24 @@ fn perform_clean() -> Result<(u64, u64), String> {
     let mut cache_info: SystemFileCacheInfo = unsafe { std::mem::zeroed() };
     cache_info.minimum_working_set = usize::MAX;
     cache_info.maximum_working_set = usize::MAX;
-    nt_set_system_information(SYSTEM_FILE_CACHE_INFORMATION, &cache_info as *const SystemFileCacheInfo as *mut _, std::mem::size_of::<SystemFileCacheInfo>() as u32)?;
+    if let Err(err) = nt_set_system_information(SYSTEM_FILE_CACHE_INFORMATION, &cache_info as *const SystemFileCacheInfo as *mut _, std::mem::size_of::<SystemFileCacheInfo>() as u32) {
+        warnings.push(format!("系统缓存清理失败（{err}）"));
+    }
 
     // 3) 清除备用页列表（最大降幅来源）
     let command = MEMORY_PURGE_STANDBY_LIST;
-    nt_set_system_information(SYSTEM_MEMORY_LIST_INFORMATION, &command as *const i32 as *mut _, std::mem::size_of::<i32>() as u32)?;
+    if let Err(err) = nt_set_system_information(SYSTEM_MEMORY_LIST_INFORMATION, &command as *const i32 as *mut _, std::mem::size_of::<i32>() as u32) {
+        warnings.push(format!("备用页列表清理失败（{err}）"));
+    }
 
     // 内存统计需要一点时间收敛
     std::thread::sleep(std::time::Duration::from_millis(500));
     let after = available_mb();
-    Ok((before, after))
+    if warnings.len() == 3 {
+        Err(warnings.join("；"))
+    } else {
+        Ok((before, after, warnings))
+    }
 }
 
 /// 提权子进程入口：清理并把结果写入指定文件，返回进程退出码。
@@ -128,8 +156,13 @@ pub fn child_entry(result_path: Option<&str>) -> i32 {
         return 2;
     };
     match perform_clean() {
-        Ok((before, after)) => {
-            let payload = json_line(before, after);
+        Ok((before, after, warnings)) => {
+            let mut payload = json_line(before, after);
+            if !warnings.is_empty() {
+                payload = payload.trim_end_matches('}').to_string();
+                payload.push_str(&format!(",\"warn\":{}", json_string(&warnings.join("；"))));
+                payload.push('}');
+            }
             if write_result(Path::new(path), &payload).is_err() {
                 return 3;
             }
@@ -157,7 +190,7 @@ fn write_result(path: &Path, payload: &str) -> std::io::Result<()> {
 }
 
 /// 通过 ShellExecuteExW(runas) 拉起提权子进程并等待其完成，返回 (before_mb, after_mb)。
-pub fn optimize_with_elevation() -> Result<(u64, u64), String> {
+pub fn optimize_with_elevation() -> Result<(u64, u64, Option<String>), String> {
     use windows::Win32::UI::Shell::{ShellExecuteExW, SHELLEXECUTEINFOW, SEE_MASK_NOCLOSEPROCESS};
     use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
 
@@ -206,7 +239,8 @@ pub fn optimize_with_elevation() -> Result<(u64, u64), String> {
         }
         let before = parsed.get("before").and_then(|v| v.as_u64()).ok_or("结果缺少 before")?;
         let after = parsed.get("after").and_then(|v| v.as_u64()).ok_or("结果缺少 after")?;
-        Ok((before, after))
+        let warn = parsed.get("warn").and_then(|v| v.as_str()).map(String::from);
+        Ok((before, after, warn))
     }
 }
 

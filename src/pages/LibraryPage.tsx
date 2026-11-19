@@ -132,10 +132,17 @@ export default function LibraryPage({ onOpenSettings }: LibraryPageProps) {
     setOptimizing(true);
     try {
       const result = await gameApi.memOptimize();
-      pushToast(
-        `内存优化完成：释放 ${result.freedMb} MB（${result.beforeMb} → ${result.afterMb}）`,
-        "info",
-      );
+      if (result.warn) {
+        pushToast(
+          `内存优化完成：释放 ${result.freedMb} MB（${result.beforeMb} → ${result.afterMb}）—— 部分步骤失败：${result.warn}`,
+          "info",
+        );
+      } else {
+        pushToast(
+          `内存优化完成：释放 ${result.freedMb} MB（${result.beforeMb} → ${result.afterMb}）`,
+          "info",
+        );
+      }
     } catch (err) {
       pushToast(toUserMessage(err));
     } finally {
