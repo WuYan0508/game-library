@@ -9,8 +9,14 @@ interface ChangelogEntry {
 /** 每个版本只记录「新增的功能」，修改与修复不在此列出。 */
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "2.2",
+    version: "2.3",
     current: true,
+    items: [
+      "托盘右键菜单新增最近启动的游戏（带图标，点击一键启动，Steam 式）",
+    ],
+  },
+  {
+    version: "2.2",
     items: [
       "设置页新增独立「手柄控制」分区（含连接状态与实时测试面板）",
       "修复：托盘隐藏期间系统休眠恢复后，点击托盘图标窗口可能不可见",
